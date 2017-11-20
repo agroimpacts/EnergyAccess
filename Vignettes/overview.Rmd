@@ -152,15 +152,21 @@ _Aggregate cluster centroid to districts by averaging
   -All survey years will be added to same districts object
 
 **Raster Analysis:** (Dan)
--
+- Create maps of energy access rates, common sources of energy by region, and deforestation rates (both at base raster resolution and aggregated by region)
 
 **Statistical Analysis of Correlation:** (Dan and Nara)
+- Correlate rates of energy access and rates of deforestation using regression modeling with *lm* module
+- Other statistical analyses as needed, aggregated over a range of scales
 
 **Beautification of Map and Chart Outputs:** (Nara and Dan)
+- Make pretty maps including region outlines
+- Possibly focus on some regions with the most vivid results
 
 ###Timelines
 
 Provide a timeline for when each portion of the analysis will be completed. These timelines should be constructed relative to the time period of presentations (during the last two weeks of class) and final project submission (during exam week). For teams, names should be associated with each step on the timeline.
+
+- Presenting December 6
 
 ##Anticipated Outcomes
 
