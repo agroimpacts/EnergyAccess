@@ -4,7 +4,7 @@ library(rgeos)
 library(raster)
 library(devtools)
 library(roxygen2)
-devtools::document()
+
 
 library(EnergyAccess)
 #Read in IPUMS Data
