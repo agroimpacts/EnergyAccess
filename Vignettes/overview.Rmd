@@ -52,14 +52,15 @@ Type of cooking fuel:
     
 Percent YES responses will be aggregated for a measure of energy access. Percent of wood-based cooking fuel use will be aggregated for a measure of wood dependence. As you can see, energy access increases over time. It is also apparent that wood as cooking fuel dramatically decreases over the years.
 
+```{r, echo=FALSE, include=FALSE}
 install.packages("sp")
 install.packages("rgdal")
 install.packages("rgeos")
 install.packages("raster")
 install.package("devtools")
 install.packages("roxygen2")
+install.packages("ggplot2")
 
-```{r, echo=FALSE, include=FALSE}
 library(sp)
 library(rgdal)
 library(rgeos)
