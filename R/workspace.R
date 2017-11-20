@@ -85,3 +85,6 @@ summary(rods)
 ?readOGR
 ogrInfo(fnm)
 
+#This is the link to download the Hansen data
+#Go to tasks and then download to google drive
+#https://code.earthengine.google.com/d5c909c06ec28626324ecd65c34417f2
