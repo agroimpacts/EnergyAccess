@@ -1,6 +1,6 @@
 ---
 title: "Energy Access Project Overview"
-author: "Vignette Author"
+author: "Nara McCray and Daniel Lassila"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
@@ -8,18 +8,161 @@ vignette: >
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
+**R for Spatial Analysis Course Final Project Description**
 
-Vignettes are long form documentation commonly included in packages. Because they are part of the distribution of the package, they need to be as compact as possible. The `html_vignette` output type provides a custom style sheet (and tweaks some options) to ensure that the resulting html is as small as possible. The `html_vignette` format:
+##Summary
 
-- Never uses retina figures
-- Has a smaller default figure size
-- Uses a custom CSS stylesheet instead of the default Twitter Bootstrap style
+  [Recent research](http://www.sciencedirect.com/science/article/pii/S0305750X17300025) has identified a relationship between deforestation rates and energy access in rural areas of developing countries. Basic energy sources typically are disperse and require manual labor and time to collect and process, wood being the most common in many rural areas without energy access. When these energy sources are exploited more quickly than they can regrow, deforestation pressures can become detrimental to the environment and to the sustainment of the traditional lifestyle. Adoption of more advanced forms of energy fuel, such as electricity, improve livelihoods and decrease deforestation rates.
+  
+  This research project uses Ghana as a case study to test the correlation between rural electrification and deforestation because of the rapid 54.4% increase in energy access the nation has experienced from 1990-2014. The project will separately assess rates of wood use through reporting on cooking fuel type, rates of electrification and rates of deforestation by district. The relationship between energy access and deforestation will then be analyzed at the district-level. Our research will improve upon previous research which was conducted at the national-scale. Household survey data and Hansen deforestation data will be used to explore the relationships of interest.
 
-## Vignette Info
+Primary objectives:
 
-Note the various macros within the `vignette` section of the metadata block above. These are required in order to instruct R how to build the vignette. Note that you should change the `title` field and the `\VignetteIndexEntry` to match the title of your vignette.
+- Create maps of:
+    - change in wood fuel use
+    - change in energy access
+    - change in deforestation
+- Assess the degree to which energy access rates impact deforestation rates
+- Produce graphs and maps to provide visual evidence of findings
 
-## Styles
+##Approach/Methodology
+
+An outline of the analytical methods and code you plan to use, including the names of key packages
+
+###Data
+
+Ghana is the study area of focus. We plan to conduct our research on the district scale. National and district boundary datasets were downloaded from the [Humanitarian Data Exchange website]( https://data.humdata.org/dataset/ghana-administrative-boundaries). The international Demographic and Health Survey asks respondents questions regarding household characteristics; two of which we will use to understand energy access and wood use in Ghana. 
+*Does the house have electricity?:
+0-NO
+1-YES
+Type of cooking fuel: 
+      1 "Electricity" 
+      2 "LPG" 
+      3 "Natural gas" 
+      4 "Biogas" 
+      5 "Kerosene" 
+      6 "Coal, lignite" 
+      7 "Charcoal" 
+      8 "Wood" 
+      9 "Straw/shrubs/grass" 
+     10 "Agricultural crop"*
+     11 "Animal dung" 
+     95 "No food cooked in house" 
+     96 "Other" *
+    
+Percent YES responses will be aggregated for a measure of energy access. Percent of wood-based cooking fuel use will be aggregated for a measure of wood dependence. As you can see, energy access increases over time. It is also apparent that wood as cooking fuel dramatically decreases over the years.
+
+install.packages("sp")
+install.packages("rgdal")
+install.packages("rgeos")
+install.packages("raster")
+install.package("devtools")
+install.packages("roxygen2")
+
+```{r, echo=FALSE, include=FALSE}
+library(sp)
+library(rgdal)
+library(rgeos)
+library(raster)
+library(devtools)
+library(roxygen2)
+
+
+#Read in IPUMS Data
+IPUMS<- read.csv(file="Data/idhs_00003.csv", stringsAsFactors = FALSE)
+head(IPUMS)
+#Reassign into boolean values
+IPUMS$ELECTRCHH[which(IPUMS$ELECTRCHH ==6 | IPUMS$ELECTRCHH ==8)]<-0
+IPUMS$COOKFUEL[which(IPUMS$COOKFUEL==400 | IPUMS$COOKFUEL==500 | IPUMS$COOKFUEL==520 |IPUMS$COOKFUEL==530) ] <-1
+IPUMS$COOKFUEL[which(IPUMS$COOKFUEL !=1 )]<-0
+
+#Create seperate tables for 3 time intervals
+C_erase<-c("SAMPLE","URBAN","CLUSTERNO", "ELECTRCHH", "COOKFUEL")
+data2003<- IPUMS[IPUMS$SAMPLE==2884, names(IPUMS) %in% C_erase]
+data2008<- IPUMS[IPUMS$SAMPLE==2885, names(IPUMS) %in% C_erase]
+data2014<- IPUMS[IPUMS$SAMPLE==2886, names(IPUMS) %in% C_erase]
+
+#Aggregate to Cluster number by averaging values
+d2003<-aggregate(data2003[, 4:5], list(data2003$CLUSTERNO), mean)
+d2008<-aggregate(data2008[, 4:5], list(data2008$CLUSTERNO), mean)
+d2014<-aggregate(data2014[, 4:5], list(data2014$CLUSTERNO), mean)
+
+#Descriptive stats
+install.packages(c("ggplot2","RColorBrewer","scales"))
+library(ggplot2); library(scales); library(grid); library(RColorBrewer)
+```
+```{r, echo=FALSE, fig.show='hold'}
+qplot(d2003$ELECTRCHH,
+      geom="histogram",
+      xlab = "Access",
+      binwidth= 0.2,
+      fill=I("blue"),
+      col=I("red"),
+      main = "Ghana Energy Access 2003")
+qplot(d2008$ELECTRCHH,
+      geom="histogram",
+      xlab = "Access",
+      binwidth= 0.2,
+      fill=I("blue"),
+      col=I("red"),
+      main = "Ghana Energy Access 2008")
+qplot(d2014$ELECTRCHH,
+      geom="histogram",
+      xlab = "Access",
+      binwidth= 0.2,
+      fill=I("blue"),
+      col=I("red"),
+      main = "Ghana Energy Access 2014")
+qplot(d2003$COOKFUEL,
+      geom="histogram",
+      xlab = "Wood Use",
+      binwidth= 0.2,
+      fill=I("blue"),
+      col=I("red"),
+      main = "Ghana Wood as Cooking Fuel 2003")
+qplot(d2008$COOKFUEL,
+      geom="histogram",
+      xlab = "Wood USe",
+      binwidth= 0.2,
+      fill=I("blue"),
+      col=I("red"),
+      main = "Ghana Wood as Cooking Fuel 2008")
+qplot(d2014$COOKFUEL,
+      geom="histogram",
+      xlab = "Wood Use",
+      binwidth= 0.2,
+      fill=I("blue"),
+      col=I("red"),
+      main = "Ghana Wood as Cooking Fuel 2014")
+```
+  Forest loss raster data developed by Hansen of the University of Maryland is available from 2003-2014. It was collected, clipped and downloaded though Google Earth Engine. The raw image has pixel values that represent the year of forest loss. The average loss per year will be calculated for the time increments of the survey (2003, 2008, 2014) and attached to the district dataframes. 
+  
+  Before the attachment of survey and deforestation loss information to the districts, first the thousands of survey sample points need to be aggregated to the cluster number. The cluster spatial coordinates are available for download with the data through the DHS website. These cluster number and locations differ from survey to survey. Survey responses will be aggregated to cluster points, then these cluster point values will be aggregated to the district shapefile dataframe.
+
+
+###Code
+
+A bullet point summary of the analysis and coding approach that you propose to follow. For teams, this section should include a description of which member will be responsible for each bullet point.
+
+**Survey Data Cleaning:** (Nara)
+-Clean data, recode, and sepeate into a dataframe for each survey year, aggregate to cluster level by averaging
+-Produce summary statistics charts using *ggplot2* package
+-Attach survey data to cluster centroids
+_Aggregate cluster centroid to districts by averaging
+  -All survey years will be added to same districts object
+
+**Raster Analysis:** (Dan)
+-
+
+**Statistical Analysis of Correlation:** (Dan and Nara)
+
+**Beautification of Map and Chart Outputs:** (Nara and Dan)
+
+###Timelines
+
+Provide a timeline for when each portion of the analysis will be completed. These timelines should be constructed relative to the time period of presentations (during the last two weeks of class) and final project submission (during exam week). For teams, names should be associated with each step on the timeline.
+
+##Anticipated Outcomes
 
 The `html_vignette` template includes a basic CSS theme. To override this theme you can specify your own CSS in the document metadata as follows:
 
@@ -31,7 +174,7 @@ The `html_vignette` template includes a basic CSS theme. To override this theme 
 
 The figure sizes have been customised so that you can easily put two images side-by-side. 
 
-```{r, fig.show='hold'}
+```{r, }
 plot(1:10)
 plot(10:1)
 ```
@@ -42,17 +185,4 @@ You can enable figure captions by `fig_caption: yes` in YAML:
       rmarkdown::html_vignette:
         fig_caption: yes
 
-Then you can use the chunk option `fig.cap = "Your figure caption."` in **knitr**.
 
-## More Examples
-
-You can write math expressions, e.g. $Y = X\beta + \epsilon$, footnotes^[A footnote here.], and tables, e.g. using `knitr::kable()`.
-
-```{r, echo=FALSE, results='asis'}
-knitr::kable(head(mtcars, 10))
-```
-
-Also a quote using `>`:
-
-> "He who gives up [code] safety for [code] speed deserves neither."
-([via](https://twitter.com/hadleywickham/status/504368538874703872))
