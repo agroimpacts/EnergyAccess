@@ -5,8 +5,7 @@ library(raster)
 library(devtools)
 library(roxygen2)
 devtools::document()
-devtools::install_github("agroimpacts/EnergyAccess", build_vignettes = TRUE,
-                         auth_token = "0969e171e5c360c0f37ca7e00e028c07d78cc9a5")
+
 library(EnergyAccess)
 #Read in IPUMS Data
 f<-system.file("Data/idhs_00003.csv", package="EnergyAccess")
