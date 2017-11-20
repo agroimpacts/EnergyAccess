@@ -10,7 +10,7 @@ devtools::install_github("agroimpacts/EnergyAccess", build_vignettes = TRUE,
 library(EnergyAccess)
 #Read in IPUMS Data
 f<-system.file("Data/idhs_00003.csv", package="EnergyAccess")
-IPUMS<- read.csv(f, stringsAsFactors = FALSE)
+IPUMS<- read.csv("Data/idhs_00003.csv", stringsAsFactors = FALSE)
 head(IPUMS)
 #Reassign into boolean values
 IPUMS$ELECTRCHH[which(IPUMS$ELECTRCHH ==6 | IPUMS$ELECTRCHH ==8)]<-0
