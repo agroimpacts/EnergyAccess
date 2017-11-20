@@ -6,10 +6,9 @@ library(devtools)
 library(roxygen2)
 
 
-library(EnergyAccess)
 #Read in IPUMS Data
-f<-system.file("Data/idhs_00003.csv", package="EnergyAccess")
-IPUMS<- read.csv("Data/idhs_00003.csv", stringsAsFactors = FALSE)
+
+IPUMS<- read.csv(file="inst/extdata/idhs_00003.csv", stringsAsFactors = FALSE)
 head(IPUMS)
 #Reassign into boolean values
 IPUMS$ELECTRCHH[which(IPUMS$ELECTRCHH ==6 | IPUMS$ELECTRCHH ==8)]<-0
@@ -28,8 +27,7 @@ d2008<-aggregate(data2008[, 4:5], list(data2008$CLUSTERNO), mean)
 d2014<-aggregate(data2014[, 4:5], list(data2014$CLUSTERNO), mean)
 
 #Descriptive stats
-install.packages(c("ggplot2","RColorBrewer","scales"))
-library(ggplot2); library(scales); library(grid); library(RColorBrewer)
+library(ggplot2); library(grid); library(RColorBrewer)
 
 qplot(d2003$ELECTRCHH,
       geom="histogram",
@@ -76,13 +74,13 @@ qplot(d2014$COOKFUEL,
 
 
 #attach survey data with spatial data
-pts03 <- system.file("Data/clusters2003/GHGE4BFL.shp")
-ogrInfo(pts03)
-roads <- readOGR(dsn = pts03)
-rods<-shapefile("Data/clusters2003/GHGE4BFL.shp")
-summary(rods)
-?readOGR
-ogrInfo(fnm)
+
+#ogrInfo(pts03)
+#roads <- readOGR(dsn = pts03)
+#rods<-shapefile("Data/clusters2003/GHGE4BFL.shp")
+#summary(rods)
+#?readOGR
+#ogrInfo(fnm)
 
 #This is the link to download the Hansen data
 #Go to tasks and then download to google drive
