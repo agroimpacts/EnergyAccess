@@ -52,14 +52,21 @@ Type of cooking fuel:
     
 Percent YES responses will be aggregated for a measure of energy access. Percent of wood-based cooking fuel use will be aggregated for a measure of wood dependence. As you can see, energy access increases over time. It is also apparent that wood as cooking fuel dramatically decreases over the years.
 
+Packages Required to run script:
+--------------------------------
+"sp"
+"rgdal"
+"rgeos"
+"raster"
+"devtools"
+"roxygen2"
+"ggplot2"
+"ggplot2"
+"RColorBrewer"
+"scales"
+
+
 ```{r, echo=FALSE, include=FALSE}
-install.packages("sp")
-install.packages("rgdal")
-install.packages("rgeos")
-install.packages("raster")
-install.package("devtools")
-install.packages("roxygen2")
-install.packages("ggplot2")
 
 library(sp)
 library(rgdal)
@@ -67,10 +74,11 @@ library(rgeos)
 library(raster)
 library(devtools)
 library(roxygen2)
-
+library(EnergyAccess)
 
 #Read in IPUMS Data
-IPUMS<- read.csv(file="Data/idhs_00003.csv", stringsAsFactors = FALSE)
+sfile<-system.file("extdata/idhs_00003.csv", package="EnergyAccess")
+IPUMS<- read.csv(sfile, stringsAsFactors = FALSE)
 head(IPUMS)
 #Reassign into boolean values
 IPUMS$ELECTRCHH[which(IPUMS$ELECTRCHH ==6 | IPUMS$ELECTRCHH ==8)]<-0
@@ -89,7 +97,6 @@ d2008<-aggregate(data2008[, 4:5], list(data2008$CLUSTERNO), mean)
 d2014<-aggregate(data2014[, 4:5], list(data2014$CLUSTERNO), mean)
 
 #Descriptive stats
-install.packages(c("ggplot2","RColorBrewer","scales"))
 library(ggplot2); library(scales); library(grid); library(RColorBrewer)
 ```
 ```{r, echo=FALSE, fig.show='hold'}
