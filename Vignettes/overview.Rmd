@@ -70,12 +70,24 @@ An outline of the analytical methods and code you plan to use, including the nam
   Percent YES responses will be aggregated for a measure of energy access. Percent of wood-based cooking fuel use will be aggregated for a measure of wood dependence. As you can see, energy access increases over time. It is also apparent that wood as cooking fuel dramatically decreases over the years.
 
 Packages Required to run script:
--------|-------
-"sp"|"rgdal"
-"rgeos"|"raster"
-"devtools"|"roxygen2"
-"ggplot2"|"RColorBrewer"
-"scales"|
+
+"sp"
+
+"rgdal"
+
+"rgeos
+
+"raster"
+
+"devtools"
+
+"roxygen2"
+
+"ggplot2"
+
+"RColorBrewer"
+
+"scales"
 
 
 ```{r, echo=FALSE, include=FALSE}
