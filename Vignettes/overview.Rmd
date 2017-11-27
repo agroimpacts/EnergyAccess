@@ -8,6 +8,9 @@ vignette: >
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
+
+Sections which are my responsibility have my name in parenthesis
+
 **Survey Data Cleaning:** (Nara)
 -Clean data, recode, and sepeate into a dataframe for each survey year, aggregate to cluster level by averaging
 -Produce summary statistics charts using *ggplot2* package
