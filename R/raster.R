@@ -33,4 +33,4 @@ deforestation <- raster(fnm)
 #fnm <- system.file("extdata/DistrictBoundary/GHA_admbndp2_1m_GAUL.shp", package = "EnergyAccess")
 #fnm <- system.file("extdata/GHA_admbndp2_1m_GAUL.shp", package = "EnergyAccess")
 
-districts <- readOGR(dsn = fnm, layer = GHA_admbndp2_1m_GAUL)
+#districts <- readOGR(dsn = fnm, layer = GHA_admbndp2_1m_GAUL)
