@@ -14,3 +14,23 @@
 #Our research will improve upon previous research which was conducted at the national-scale.
 #Household survey data and Hansen deforestation data will be used to explore the relationships of
 #interest.
+
+library(devtools)
+library(sp)
+library(rgdal)
+library(rgeos)
+library(raster)
+library(gstat)
+library(roxygen2)
+library(ggplot2)
+
+#install_github(repo = "agroimpacts/EnergyAccess", ref = "dml",
+#auth_token = "0ded53980c6a7503284cab8e422efc67d0cb5e80")
+
+fnm <- system.file("extdata/HansenAllyr.tif", package = "EnergyAccess")
+deforestation <- raster(fnm)
+
+#fnm <- system.file("extdata/DistrictBoundary/GHA_admbndp2_1m_GAUL.shp", package = "EnergyAccess")
+#fnm <- system.file("extdata/GHA_admbndp2_1m_GAUL.shp", package = "EnergyAccess")
+
+districts <- readOGR(dsn = fnm, layer = GHA_admbndp2_1m_GAUL)
