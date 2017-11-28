@@ -27,10 +27,48 @@ library(ggplot2)
 #install_github(repo = "agroimpacts/EnergyAccess", ref = "dml",
 #auth_token = "0ded53980c6a7503284cab8e422efc67d0cb5e80")
 
+#Read in deforestation raster and district boundary vector
+
 fnm <- system.file("extdata/HansenAllyr.tif", package = "EnergyAccess")
 deforestation <- raster(fnm)
 
-#fnm <- system.file("extdata/DistrictBoundary/GHA_admbndp2_1m_GAUL.shp", package = "EnergyAccess")
-#fnm <- system.file("extdata/GHA_admbndp2_1m_GAUL.shp", package = "EnergyAccess")
+fnm2 <- system.file("extdata/DistrictBoundary/GHA_admbndp2_1m_GAUL.shp", package = "EnergyAccess")
+districts <- readOGR(dsn = fnm2, layer = "GHA_admbndp2_1m_GAUL")
 
-#districts <- readOGR(dsn = fnm, layer = GHA_admbndp2_1m_GAUL)
+#Rasterize district boundary vector
+zamr <- raster(x = extent(districts), crs = crs(districts), res = 0.1)
+values(zamr) <- 1:ncell(zamr)
+districts$ID <- 1:length(districts)
+districtsraster <- rasterize(x = districts, y = zamr, field = "ID")
+districtsraster
+
+#plot_noaxes
+
+plot_noaxes <- function(x, axes = FALSE, box = FALSE, mar = c(0, 0, 1, 4),
+                        ...) {
+  if(!class(x) %in% c("RasterLayer", "RasterStack", "RasterBrick", "Extent")) {
+    stop("This function is intended for rasters only", call. = FALSE)
+  }
+  par(mar = mar)
+  plot(x, axes = axes, box = axes, ...)
+}
+
+#get them to all the same coordinate system (this didn't quite work)
+zamr_alb <- projectRaster(from = zamr, res = 5000, crs = crs(districts),
+                       method = "ngb")
+deforest_alb <- projectRaster(from = deforestation, to = zamr_alb, res = 5000, crs = crs(districts),
+                              method = "ngb")
+
+#Reclassify all deforestation to 1 category in deforestation raster
+
+rclmat <- matrix(
+  c(0, 1, 0, 1, 15, 1),
+  nrow = 2,
+  ncol = 3,
+  byrow = TRUE)
+
+deforestclass <- reclassify(x = deforestation, rcl = rclmat, include.lowest = TRUE)
+
+#Summarize deforestation statistics by district
+#Need to find resolution and coordinate system of raster
+#Possibly do some resampling
