@@ -70,25 +70,25 @@ deforest_alb <- projectRaster(from = deforestation, to = zamr_alb, method = "ngb
 #Reclassify all deforestation to the yearly categories in deforestation raster
 
 rclmat <- matrix(
-  c(0, 1, 0, 1, 15, 1),
+  c(0, 0.9, 0, 0.99, 16, 1),
   nrow = 2,
   ncol = 3,
   byrow = TRUE)
 
 rclmat1 <- matrix(
-  c(0, 1, 0, 1, 3, 1, 4, 15, 0),
+  c(0, 0.9, 0, 0.99, 3.9, 1, 3.99, 16, 0),
   nrow = 3,
   ncol = 3,
   byrow = TRUE)
 
 rclmat2 <- matrix(
-  c(0, 3, 0, 4, 8, 1, 9, 15, 0),
+  c(0, 3.9, 0, 3.99, 8.9, 1, 8.99, 16, 0),
   nrow = 3,
   ncol = 3,
   byrow = TRUE)
 
 rclmat3 <- matrix(
-  c(0, 8, 0, 9, 14, 1, 15, 15, 0),
+  c(0, 8.9, 0, 8.99, 14.9, 1, 14.99, 16, 0),
   nrow = 3,
   ncol = 3,
   byrow = TRUE)
@@ -110,7 +110,17 @@ deforest.0103 <- extract(deforestclass0103, dist_albs)
 deforest.0408 <- extract(deforestclass0408, dist_albs)
 deforest.0914 <- extract(deforestclass0914, dist_albs)
 
-districts$deforest.total <- sapply(deforest.total, mean)
-districts$deforest.0103 <- sapply(deforest.0103, mean)
-districts$deforest.0408 <- sapply(deforest.0408, mean)
-districts$deforest.0914 <- sapply(deforest.0914, mean)
+districts$deforest.total <- 100*sapply(deforest.total, mean)
+districts$deforest.0103 <- 100*sapply(deforest.0103, mean)
+districts$deforest.0408 <- 100*sapply(deforest.0408, mean)
+districts$deforest.0914 <- 100*sapply(deforest.0914, mean)
+
+#districts$deforest.total <- 100*districts$deforest.total
+#districts$deforest.0103 <- 100*districts$deforest.0103
+#districts$deforest.0408 <- 100*districts$deforest.0408
+#districts$deforest.0914 <- 100*districts$deforest.0914
+
+#spplot(districts, z = "deforest.total")
+#spplot(districts, z = "deforest.0103")
+#spplot(districts, z = "deforest.0408")
+#spplot(districts, z = "deforest.0914")
