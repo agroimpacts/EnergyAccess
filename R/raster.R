@@ -35,12 +35,13 @@ deforestation <- raster(fnm)
 fnm2 <- system.file("extdata/DistrictBoundary/GHA_admbndp2_1m_GAUL.shp", package = "EnergyAccess")
 districts <- readOGR(dsn = fnm2, layer = "GHA_admbndp2_1m_GAUL")
 
+#Should aggregate to districts first, don't need to rasterize
 #Rasterize district boundary vector
-zamr <- raster(x = extent(districts), crs = crs(districts), res = 0.1)
-values(zamr) <- 1:ncell(zamr)
-districts$ID <- 1:length(districts)
-districtsraster <- rasterize(x = districts, y = zamr, field = "ID")
-districtsraster
+#zamr <- raster(x = extent(districts), crs = crs(districts), res = 0.1)
+#values(zamr) <- 1:ncell(zamr)
+#districts$ID <- 1:length(districts)
+#districtsraster <- rasterize(x = districts, y = zamr, field = "ID")
+#districtsraster
 
 #plot_noaxes
 
@@ -54,12 +55,19 @@ plot_noaxes <- function(x, axes = FALSE, box = FALSE, mar = c(0, 0, 1, 4),
 }
 
 #get them to all the same coordinate system (this didn't quite work)
-zamr_alb <- projectRaster(from = zamr, res = 5000, crs = crs(districts),
-                       method = "ngb")
-deforest_alb <- projectRaster(from = deforestation, to = zamr_alb, res = 5000, crs = crs(districts),
-                              method = "ngb")
 
-#Reclassify all deforestation to 1 category in deforestation raster
+dist_albs <- spTransform(x=districts, CRS="+proj=aea +lat_1=20 +lat_2=-23 +lat_0=0
+                         +lon_0=25 +x_0=0 +y_0=0 +ellps=WGS84 +units=m +no_defs")
+
+zamr_alb <- projectRaster(from = zamr, res = 2500, crs = crs(dist_albs),
+                          method = "ngb")
+
+deforest_alb <- projectRaster(from = deforestation, to = zamr_alb, method = "ngb")
+
+
+
+
+#Reclassify all deforestation to the yearly categories in deforestation raster
 
 rclmat <- matrix(
   c(0, 1, 0, 1, 15, 1),
@@ -67,8 +75,42 @@ rclmat <- matrix(
   ncol = 3,
   byrow = TRUE)
 
-deforestclass <- reclassify(x = deforestation, rcl = rclmat, include.lowest = TRUE)
+rclmat1 <- matrix(
+  c(0, 1, 0, 1, 3, 1, 4, 15, 0),
+  nrow = 3,
+  ncol = 3,
+  byrow = TRUE)
+
+rclmat2 <- matrix(
+  c(0, 3, 0, 4, 8, 1, 9, 15, 0),
+  nrow = 3,
+  ncol = 3,
+  byrow = TRUE)
+
+rclmat3 <- matrix(
+  c(0, 8, 0, 9, 14, 1, 15, 15, 0),
+  nrow = 3,
+  ncol = 3,
+  byrow = TRUE)
+
+totaldeforestclass <- reclassify(x = deforest_alb, rcl = rclmat, include.lowest = TRUE)
+
+deforestclass0103 <- reclassify(x = deforest_alb, rcl = rclmat1, include.lowest = TRUE)
+
+deforestclass0408 <- reclassify(x = deforest_alb, rcl = rclmat2, include.lowest = TRUE)
+
+deforestclass0914 <- reclassify(x = deforest_alb, rcl = rclmat3, include.lowest = TRUE)
 
 #Summarize deforestation statistics by district
 #Need to find resolution and coordinate system of raster
 #Possibly do some resampling
+
+deforest.total <- extract(totaldeforestclass, dist_albs)
+deforest.0103 <- extract(deforestclass0103, dist_albs)
+deforest.0408 <- extract(deforestclass0408, dist_albs)
+deforest.0914 <- extract(deforestclass0914, dist_albs)
+
+districts$deforest.total <- sapply(deforest.total, mean)
+districts$deforest.0103 <- sapply(deforest.0103, mean)
+districts$deforest.0408 <- sapply(deforest.0408, mean)
+districts$deforest.0914 <- sapply(deforest.0914, mean)
