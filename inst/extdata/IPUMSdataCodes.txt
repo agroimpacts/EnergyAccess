@@ -1,0 +1,260 @@
+Description: Revision of (Electricity, Cooking fuel, Female respondent literacy, and husband's field of employment. Ghana 2003, 2008, 2014)
+Samples selected:
+      Ghana 2003 Women                                  regular
+      Ghana 2008 Women                                  regular
+      Ghana 2014 Women                                  regular
+File Type:                    rectangular
+Case Selection:               No
+  Variable               Columns        Len    GH03    GH08    GH14   
+  SAMPLE             P   1-4            4      X       X       X 
+  CASEID             P   5-22          18      X       X       X 
+  IDHSPID            P  23-44          22      X       X       X 
+  IDHSHID            P  45-63          19      X       X       X 
+  HHID               P  64-78          15      X       X       X 
+  HHNUM              P  79-82           4      X       X       X 
+  PSU                P  83-87           5      X       X       X 
+  STRATA             P  88-91           4      X       X       X 
+  DOMAIN             P  92-93           2      X       X       X 
+  PERWEIGHT          P  94-101          8      X       X       X 
+  DVWEIGHT           P 102-109          8      .       X       . 
+  URBAN              P 110              1      X       X       X 
+  CLUSTERNO          P 111-118          8      X       X       X 
+  DISTRICT           P 119-121          3      X       X       . 
+  RESIDENT           P 122              1      X       X       X 
+  ELECTRCHH          P 123              1      X       X       X 
+  COOKFUEL           P 124-126          3      X       X       X 
+  HUSJOB             P 127-128          2      X       X       X 
+  EDUCLVL            P 129              1      X       X       X 
+  SAMPLESTR          P 130-133          4      X       X       X 
+  DHSID              P 134-147         14      X       X       X 
+
+Variable Availability Key:
+All Years X - available in this sample
+All Years . - not available in this sample
+
+
+ SAMPLE		IDHS sample identifier
+2311		Ethiopia 2000
+2312		Ethiopia 2005
+2313		Ethiopia 2011
+2314		Ethiopia 2016
+2881		Ghana 1988
+2882		Ghana 1993
+2883		Ghana 1998
+2884		Ghana 2003
+2885		Ghana 2008
+2886		Ghana 2014
+3561		India 1992-3
+3562		India 1998-9
+3563		India 2005-6
+4041		Kenya 1989
+4042		Kenya 1993
+4043		Kenya 1998
+4044		Kenya 2003
+4045		Kenya 2008-9
+4046		Kenya 2014
+4541		Malawi 1992
+4542		Malawi 2000
+4543		Malawi 2004
+4544		Malawi 2010
+4545		Malawi 2016
+4661		Mali 1987
+4662		Mali 1995-6
+4663		Mali 2001
+4664		Mali 2006
+4665		Mali 2012
+5661		Nigeria 1990
+5662		Nigeria 1999
+5663		Nigeria 2003
+5664		Nigeria 2008
+5665		Nigeria 2013
+7161		Zimbabwe 1988
+7162		Zimbabwe 1994
+7163		Zimbabwe 1999
+7164		Zimbabwe 2005-6
+7165		Zimbabwe 2010-11
+7166		Zimbabwe 2015
+8181		Egypt 1988
+8182		Egypt 1992
+8183		Egypt 1995
+8184		Egypt 2000
+8185		Egypt 2005
+8186		Egypt 2008
+8187		Egypt 2014
+2041		Benin 1996
+2042		Benin 2001
+2043		Benin 2006
+2044		Benin 2011
+8541		Burkina Faso 1993
+8542		Burkina Faso 1998
+8543		Burkina Faso 2003
+8544		Burkina Faso 2010
+3841		Cote d'Ivoire 1994
+3842		Cote d'Ivoire 1998
+3843		Cote d'Ivoire 2011
+3241		Guinea 1999
+3242		Guinea 2005
+3243		Guinea 2012
+5081		Mozambique 1997
+5082		Mozambique 2003
+5083		Mozambique 2011
+5621		Niger 1992
+5622		Niger 1998
+5623		Niger 2006
+5624		Niger 2012
+8341		Tanzania 1991
+8342		Tanzania 1996
+8343		Tanzania 1999
+8344		Tanzania 2004
+8345		Tanzania 2010
+8346		Tanzania 2015
+8001		Uganda 1988
+8002		Uganda 1995
+8003		Uganda 2001
+8004		Uganda 2006
+8005		Uganda 2011
+8941		Zambia 1992
+8942		Zambia 1996
+8943		Zambia 2001
+8944		Zambia 2007
+8945		Zambia 2013
+1201		Cameroon 1991
+1202		Cameroon 1998
+1203		Cameroon 2004
+1204		Cameroon 2011
+4501		Madagascar 1992
+4502		Madagascar 1997
+4503		Madagascar 2003
+4504		Madagascar 2008
+6461		Rwanda 1992
+6462		Rwanda 2000
+6463		Rwanda 2005
+6464		Rwanda 2010
+6465		Rwanda 2014
+0501		Bangladesh 1994
+0502		Bangladesh 1996-97
+0503		Bangladesh 1999-00
+0504		Bangladesh 2004
+0505		Bangladesh 2007
+0506		Bangladesh 2011
+0507		Bangladesh 2014
+1081		Burundi 1987
+1082		Burundi 2010
+1801		Congo Democratic Republic 2007
+1802		Congo Democratic Republic 2013-14
+3201		Guatemala 1987
+3202		Guatemala 1995
+3203		Guatemala 2015
+1161		Cambodia 2000
+1162		Cambodia 2005
+1163		Cambodia 2010
+1164		Cambodia 2014
+5241		Nepal 1996
+5242		Nepal 2001
+5243		Nepal 2006
+5244		Nepal 2011
+5861		Pakistan 1990-91
+5862		Pakistan 2006-07
+5863		Pakistan 2012-13
+6041		Peru 1991-92
+6042		Peru 1996
+6043		Peru 2000
+6044		Peru 2004-08
+6045		Peru 2010
+6046		Peru 2011
+6047		Peru 2012
+7291		Sudan 1989-90
+1481		Chad 1996-97
+1482		Chad 2004
+1483		Chad 2014
+7921		Turkey 1993
+7922		Turkey 1998
+7923		Turkey 2003
+8871		Yemen 1991-92
+8872		Yemen 2013
+7101		South Africa 1998
+0011		Model 2015
+5041		Morocco 1987
+5042		Morocco 1992
+5043		Morocco 2003
+0041		Afghanistan 2015
+1041		Myanmar 2015
+7881		Tunisia 1988
+
+ URBAN		Urban-rural status
+1		Urban
+2		Rural
+
+ RESIDENT		Usual resident or visitor
+1		Usual resident
+2		Visitor
+8		Missing
+
+ ELECTRCHH		Dwelling has electricity (from hh record)
+0		No
+1		Yes
+6		Non-resident
+8		Missing
+
+ COOKFUEL		Type of fuel household uses for cooking
+100		Electricity
+200		Petroleum-based
+210		Gasoline
+220		LPG, natural gas
+221		LPG (liquefied petroleum gas)
+222		Natural gas
+230		Bottled gas (butane or propane)
+240		Kerosene
+300		Biogas
+400		Coal-based
+410		Coal, lignite
+411		Coal, coke, lignite
+500		Wood- or grass-based
+510		Wood
+520		Charcoal
+530		Firewood, straw
+540		Straw, shrub, grass
+600		Dung-based
+611		Animal dung
+612		Cow dung cakes
+613		Dung cakes
+700		Agricultural crop-based
+710		Crop residues
+720		Maize or other crop waste
+800		Other
+801		Jelly
+802		Solar
+995		No food cooked in house
+996		Non-resident
+998		Missing
+
+ HUSJOB		Partner's occupation
+10		Did not work
+11		Not working, student or applicant
+12		Unemployed
+13		Student
+20		Prof., Tech., Manag.
+30		Clerical or Sales
+31		Clerical
+32		Sales
+40		Agricultural, breeding, fishing, forest
+41		Agriculture, self-employed
+42		Agriculture, employee
+50		Household, domestic, and services
+51		Household and domestic
+52		Services
+60		Skilled and unskilled manual
+61		Skilled manual
+62		Unskilled manual
+70		Other
+71		Army
+97		Don't know
+98		Missing
+99		NIU (not in universe)
+
+ EDUCLVL		Highest educational level
+0		No education
+1		Primary
+2		Secondary
+3		Higher
+8		Missing
