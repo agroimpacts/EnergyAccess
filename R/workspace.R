@@ -28,7 +28,12 @@ data2014<- IPUMS[IPUMS$SAMPLE==2886, names(IPUMS) %in% C_erase]
 d2003<-aggregate(data2003[, 4:5], list(data2003$CLUSTERNO), mean)
 d2008<-aggregate(data2008[, 4:5], list(data2008$CLUSTERNO), mean)
 d2014<-aggregate(data2014[, 4:5], list(data2014$CLUSTERNO), mean)
-
+d2003$COOKFUEL<-round(d2003$COOKFUEL, 3)*100
+d2003$ELECTRCHH<-round(d2003$ELECTRCHH, 3)*100
+d2008$COOKFUEL<-round(d2008$COOKFUEL, 3)*100
+d2008$ELECTRCHH<-round(d2008$ELECTRCHH, 3)*100
+d2014$COOKFUEL<-round(d2014$COOKFUEL, 3)*100
+d2014$ELECTRCHH<-round(d2014$ELECTRCHH, 3)*100
 #Descriptive stats
 library(ggplot2); library(grid)
 
@@ -75,7 +80,6 @@ qplot(d2014$COOKFUEL,
       col=I("red"),
       main = "Ghana Wood as Cooking Fuel 2014")
 
-
 ### MAKING SURVEY DATA SPATIAL ###
 #Import survey cluster points
 clust03<-shapefile("inst/extdata/clusters2003/c2003c.shp") #2003 Survey
@@ -92,8 +96,8 @@ clust14M <- merge(clust14, d2014, by.x = "DHSCLUST",
 
 #Import shapefile of Ghana districts
 districts<-shapefile("inst/extdata/DistrictBoundry/GHA_admbndp2_1m_GAUL.shp")
+districts <- districts[,(names(districts) %in% "HRname")] #keep column with district names
 
-#
 #project files to Albers Equal Area
 dist_albs<-spTransform(x=districts, CRS="+proj=aea +lat_1=20 +lat_2=-23 +lat_0=0
                        +lon_0=25 +x_0=0 +y_0=0 +ellps=WGS84 +units=m +no_defs")
@@ -115,50 +119,64 @@ ordkrig <- gstat(id = "COOKFUEL", formula = COOKFUEL ~ 1, data = c2003, model= m
 ordkrigr <- interpolate(object = r, model = ordkrig)
 ordkrigrmsk <- mask(x = ordkrigr, mask = dist_albs)
 plot(ordkrigrmsk)
-
-#visualization of results with voronoi polygons
+### VISUALIZATION ###
+#data displayed in voronoi polygons
 allyrs<-c(c2003, c2008, c2014)
 ghana <- aggregate(dist_albs)
 v_allyrs<-lapply (allyrs, function(x) {
   v<- voronoi(x)
   intersect(v, ghana)
 })
-#toying with creating interactive maps
-install.packages("rworldmap")
-library("rworldmap")
+#interactive maps of voronoi polygons
 install.packages("mapview")
 library("mapview")
-
-#ggmap(base_map)
-CookNames<-c("2003 Wood as Cooking Fuel", "2008 Wood as Cooking Fuel", "2014 Wood as Cooking Fuel")
-
-vc_map03<-mapview(v_allyrs[[1]], zcol="COOKFUEL", alpha.regions=100, col="gray27", legend=TRUE, col.regions=rev(get_col_regions()))
-vc_map08<-mapview(v_allyrs[[2]], zcol="COOKFUEL", alpha.regions=100, col="gray27", legend=TRUE, col.regions=rev(get_col_regions()))
-vc_map14<-mapview(v_allyrs[[3]], zcol="COOKFUEL", alpha.regions=100, col= "gray27", legend=TRUE, col.regions=rev(get_col_regions()))
+cols<-rev(get_col_regions())
+vc_map03<-mapview(v_allyrs[[1]], zcol="COOKFUEL", popup=NA, layer.name="2003 Wood Use", alpha.regions=100, col="gray27", legend=TRUE, col.regions=cols)
+vc_map08<-mapview(v_allyrs[[2]], zcol="COOKFUEL", popup=NA, layer.name="2008 Wood Use", alpha.regions=100, col="gray27", legend=TRUE, col.regions=cols)
+vc_map14<-mapview(v_allyrs[[3]], zcol="COOKFUEL", popup=NA, layer.name="2014 Wood Use", alpha.regions=100, col= "gray27", legend=TRUE, col.regions=cols)
 CookvMaps=vc_map03+vc_map08+vc_map14
 CookvMaps
-ve_map03<-mapview(v_allyrs[[1]], zcol="ELECTRCHH", legend=TRUE, col.regions=rev(get_col_regions()))
-ve_map08<-mapview(v_allyrs[[2]], zcol="ELECTRCHH", legend=TRUE, col.regions=rev(get_col_regions()))
-ve_map14<-mapview(v_allyrs[[3]], zcol="ELECTRCHH", legend=TRUE, col.regions=rev(get_col_regions()))
+ve_map03<-mapview(v_allyrs[[1]], zcol="ELECTRCHH", popup=NA, layer.name="2003 Energy Access", alpha.regions=100, col= "gray27", legend=TRUE, col.regions=cols)
+ve_map08<-mapview(v_allyrs[[2]], zcol="ELECTRCHH", popup=NA, layer.name="2008 Energy Access", alpha.regions=100, col= "gray27", legend=TRUE, col.regions=cols)
+ve_map14<-mapview(v_allyrs[[3]], zcol="ELECTRCHH", popup=NA, layer.name="2014 Energy Access", alpha.regions=100, col= "gray27", legend=TRUE, col.regions=cols)
 ElecvMaps=ve_map03+ve_map08+ve_map14
 ElecvMaps
-mapshot(object, file = "my_interactive_map.html") #create html
+webshot::install_phantomjs()
+mapshot(CookvMaps, file = "my_interactive_map.html") #create html
 ?mapview
-# Make a composite plot:
-# see ?print.trellis for more details
-print(p03, position = c(0,.5,.5,1),more=T)
-print(p08, position = c(.5,.5,1,1),more = T)
-print(p14, position = c(0,0,1,.5))
+
 #extract values from voronoi to districts so there arent too many 1's and 0's
-experiment<-over(x=dist_albs, y=vca[21:22], fn=mean)
-class(experiment)
-newdist<- dist_albs
-newdist$COOKFUEL<-experiment[,"COOKFUEL"]
-newdist$ELECTRCHH<-experiment[,"ELECTRCHH"]
-spplot(newdist, z="COOKFUEL", col.regions=rev(get_col_regions()), col="transparent")
+v_district<-lapply(v_allyrs, function(x) {
+  over(x=dist_albs, y=x[21:22], fn=mean)
+})
+d03<-as.data.frame(v_district[1])
+d08<-as.data.frame(v_district[2])
+d14<-as.data.frame(v_district[3])
+dist_albs$COOKFUEL03<-round(d03[,"COOKFUEL"],3)
+dist_albs$ELECTRCHH03<-round(d03[,"ELECTRCHH"],3)
+dist_albs$COOKFUEL08<-round(d08[,"COOKFUEL"],3)
+dist_albs$ELECTRCHH08<-round(d08[,"ELECTRCHH"],3)
+dist_albs$COOKFUEL14<-round(d14[,"COOKFUEL"],3)
+dist_albs$ELECTRCHH14<-round(d14[,"ELECTRCHH"],3)
 
+#interactive maps of districts
+e_map03<-mapview(dist_albs, zcol="ELECTRCHH03", layer.name="2003 Energy Access", maxpoints=40000000, alpha.regions=100,legend=TRUE)
+e_map08<-mapview(dist_albs, zcol="ELECTRCHH08", layer.name="2008 Energy Access", maxpoints=40000000, alpha.regions=100,legend=TRUE)
+e_map14<-mapview(dist_albs, zcol="ELECTRCHH14", layer.name="2014 Energy Access", maxpoints=40000000, alpha.regions=100,legend=TRUE)
+ElecMaps=e_map03+ e_map08 +e_map14
+ElecMaps
+c_map03<-mapview(dist_albs, zcol="COOKFUEL03", layer.name="2003 Wood Use", maxpoints=40000000, alpha.regions=100,legend=TRUE)
+c_map08<-mapview(dist_albs, zcol="COOKFUEL08", layer.name="2008 Wood Use", maxpoints=40000000, alpha.regions=100,legend=TRUE)
+c_map14<-mapview(dist_albs, zcol="COOKFUEL14", layer.name="2014 Wood Use", maxpoints=40000000, alpha.regions=100,legend=TRUE)
+CookMaps<-c_map03+c_map08+c_map14
+CookMaps
 
-
+### ANALYIS ###
+sat.mod <- lm(COOKFUEL ~ ELECTRCHH, # regression formula
+              data=d14) # data set
+# Summarize and print the results
+summary(sat.mod)
+plot(sat.mod)
 #This is the link to download the Hansen data
 #Go to tasks and then download to google drive
 #https://code.earthengine.google.com/d5c909c06ec28626324ecd65c34417f2
