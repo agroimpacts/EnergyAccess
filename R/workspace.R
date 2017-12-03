@@ -93,17 +93,7 @@ clust14M <- merge(clust14, d2014, by.x = "DHSCLUST",
 #Import shapefile of Ghana districts
 districts<-shapefile("inst/extdata/DistrictBoundry/GHA_admbndp2_1m_GAUL.shp")
 
-#toying with creating interactive maps
-install.packages("rworldmap")
-library("rworldmap")
-install.packages("mapview")
-library("mapview")
-install.packages("ggmap")
-library(ggmap)
-base_map <- get_map(location = "Ghana", zoom = 7, color = "color") #or bw
-ggmap(base_map)
-mapview(vca)
-
+#
 #project files to Albers Equal Area
 dist_albs<-spTransform(x=districts, CRS="+proj=aea +lat_1=20 +lat_2=-23 +lat_0=0
                        +lon_0=25 +x_0=0 +y_0=0 +ellps=WGS84 +units=m +no_defs")
@@ -133,22 +123,27 @@ v_allyrs<-lapply (allyrs, function(x) {
   v<- voronoi(x)
   intersect(v, ghana)
 })
-v_allyrs
-spplot(v_allyrs)
-v <- voronoi(c2003)
-vca <- intersect(v, ghana)
-ggplot(v_allyrs[[1]]) +
-  geom_polygon(aes(fill = rate), colour = alpha("white", 1 / 2), size = 0.2) +
-  geom_polygon(data = v_allyrs, colour = "white", fill = NA) +
-  scale_fill_viridis(option="magma")
+#toying with creating interactive maps
+install.packages("rworldmap")
+library("rworldmap")
+install.packages("mapview")
+library("mapview")
 
-?ggplot
+#ggmap(base_map)
+CookNames<-c("2003 Wood as Cooking Fuel", "2008 Wood as Cooking Fuel", "2014 Wood as Cooking Fuel")
 
-p03<-spplot(v_allyrs[[1]], 'COOKFUEL', col.regions=rev(get_col_regions()))
-p08<-spplot(v_allyrs[[2]], 'COOKFUEL', col.regions=rev(get_col_regions()))
-p14<-spplot(v_allyrs[[3]], 'COOKFUEL', col.regions=rev(get_col_regions()))
-?spplot
-
+vc_map03<-mapview(v_allyrs[[1]], zcol="COOKFUEL", alpha.regions=100, col="gray27", legend=TRUE, col.regions=rev(get_col_regions()))
+vc_map08<-mapview(v_allyrs[[2]], zcol="COOKFUEL", alpha.regions=100, col="gray27", legend=TRUE, col.regions=rev(get_col_regions()))
+vc_map14<-mapview(v_allyrs[[3]], zcol="COOKFUEL", alpha.regions=100, col= "gray27", legend=TRUE, col.regions=rev(get_col_regions()))
+CookvMaps=vc_map03+vc_map08+vc_map14
+CookvMaps
+ve_map03<-mapview(v_allyrs[[1]], zcol="ELECTRCHH", legend=TRUE, col.regions=rev(get_col_regions()))
+ve_map08<-mapview(v_allyrs[[2]], zcol="ELECTRCHH", legend=TRUE, col.regions=rev(get_col_regions()))
+ve_map14<-mapview(v_allyrs[[3]], zcol="ELECTRCHH", legend=TRUE, col.regions=rev(get_col_regions()))
+ElecvMaps=ve_map03+ve_map08+ve_map14
+ElecvMaps
+mapshot(object, file = "my_interactive_map.html") #create html
+?mapview
 # Make a composite plot:
 # see ?print.trellis for more details
 print(p03, position = c(0,.5,.5,1),more=T)
@@ -161,6 +156,8 @@ newdist<- dist_albs
 newdist$COOKFUEL<-experiment[,"COOKFUEL"]
 newdist$ELECTRCHH<-experiment[,"ELECTRCHH"]
 spplot(newdist, z="COOKFUEL", col.regions=rev(get_col_regions()), col="transparent")
+
+
 
 #This is the link to download the Hansen data
 #Go to tasks and then download to google drive
