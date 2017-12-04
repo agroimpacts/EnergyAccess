@@ -42,6 +42,7 @@ d2008$COOKFUEL<-round(d2008$COOKFUEL, 3)*100
 d2008$ELECTRCHH<-round(d2008$ELECTRCHH, 3)*100
 d2014$COOKFUEL<-round(d2014$COOKFUEL, 3)*100
 d2014$ELECTRCHH<-round(d2014$ELECTRCHH, 3)*100
+
 #Descriptive stats
 library(ggplot2); library(grid)
 
@@ -110,7 +111,7 @@ clust08M <- clust08M[!is.na(clust08M@data$COOKFUEL),]
 clust14M <- clust14M[!is.na(clust14M@data$COOKFUEL),]
 
 #Import shapefile of Ghana districts
-districts<-shapefile("inst/extdata/DistrictBoundry/GHA_admbndp2_1m_GAUL.shp")
+districts<-shapefile("inst/extdata/DistrictBoundary/GHA_admbndp2_1m_GAUL.shp")
 districts <- districts[,(names(districts) %in% "HRname")] #keep column with district names
 
 #project files to Albers Equal Area
@@ -119,22 +120,40 @@ dist_albs<-spTransform(x=districts, CRS="+proj=aea +lat_1=20 +lat_2=-23 +lat_0=0
 c2003<-spTransform(x=clust03M, CRSobj=proj4string(dist_albs))
 c2008<-spTransform(x=clust08M, CRSobj=proj4string(dist_albs))
 c2014<-spTransform(x=clust14M, CRSobj=proj4string(dist_albs))
+clist<-c(c2003, c2008, c2014)
 
 #Inverse Distance Weighing Interpolation of points
-r <- raster(extent(dist_albs), res = 5000, crs = crs(dist_albs),
+r <- raster(extent(dist_albs), res = 2000, crs = crs(dist_albs),
             vals = 1)
-invdist <- gstat(id = "COOKFUEL", formula = COOKFUEL ~ 1, data = c2003)
-invdistr <- interpolate(object = r, model = invdist)
-invdistrmsk <- mask(x = invdistr, mask = dist_albs)
-plot(invdistrmsk)
-vvala<-over(x=dist_albs, y=x[21:22], fn=mean)
-#kriging (not working for COOKFUEL 2003)
-v6 <- variogram(object = COOKFUEL ~ 1, data = c2003)
-m <- fit.variogram(object = v6, model = vgm("Sph"))
-ordkrig <- gstat(id = "COOKFUEL", formula = COOKFUEL ~ 1, data = c2003, model= m)
-ordkrigr <- interpolate(object = r, model = ordkrig)
-ordkrigrmsk <- mask(x = ordkrigr, mask = dist_albs)
-plot(ordkrigrmsk)
+
+interpolCOOK <- lapply(clist, function(x) {
+  a <- gstat(id = "COOKFUEL", formula = COOKFUEL ~ 1, data = x)
+  b <- interpolate(object = r, model = a)
+  c <- mask(x = b, mask = dist_albs)
+})
+interpolEnergy <- lapply(clist, function(x) {
+  a <- gstat(id = "ELECTRCHH", formula = ELECTRCHH ~ 1, data = x)
+  b <- interpolate(object = r, model = a)
+  c <- mask(x = b, mask = dist_albs)
+})
+
+dist_a<-dist_albs
+v.vals <- extract(interpolCOOK[[3]], dist_a)
+dist_a$COOKFUEL14 <- sapply(v.vals, mean)
+v.vals <- extract(interpolCOOK[[2]], dist_a)
+dist_a$COOKFUEL08 <- sapply(v.vals, mean)
+v.vals <- extract(interpolCOOK[[1]], dist_a)
+dist_a$COOKFUEL03 <- sapply(v.vals, mean)
+
+v.vals <- extract(interpolEnergy[[3]], dist_a)
+dist_a$ELECTRCHH14 <- sapply(v.vals, mean)
+v.vals <- extract(interpolEnergy[[2]], dist_a)
+dist_a$ELECTRCHH08 <- sapply(v.vals, mean)
+v.vals <- extract(interpolEnergy[[1]], dist_a)
+dist_a$ELECTRCHH03 <- sapply(v.vals, mean)
+
+statsss<-lm(COOKFUEL03 ~ deforest03, data=dist_albs)
+summary(statsss)
 ### VISUALIZATION ###
 #data displayed in voronoi polygons
 allyrs<-c(c2003, c2008, c2014)
@@ -144,7 +163,7 @@ v_allyrs<-lapply (allyrs, function(x) {
   intersect(v, ghana)
 })
 #interactive maps of voronoi polygons
-library("mapview")
+library(mapview)
 cols<-rev(get_col_regions())
 vc_map03<-mapview(v_allyrs[[1]], zcol="COOKFUEL", popup=NA, layer.name="2003 Wood Use", alpha.regions=100, col="gray27", legend=TRUE, col.regions=cols)
 vc_map08<-mapview(v_allyrs[[2]], zcol="COOKFUEL", popup=NA, layer.name="2008 Wood Use", alpha.regions=100, col="gray27", legend=TRUE, col.regions=cols)

@@ -29,30 +29,19 @@ library(ggplot2)
 
 #Read in deforestation raster and district boundary vector
 
-fnm <- system.file("extdata/HansenAllyr.tif", package = "EnergyAccess")
-deforestation <- raster(fnm)
+#fnm <- system.file("extdata/HansenAllyr.tif", package = "EnergyAccess")
+deforestation <- raster("inst/extdata/HansenAllyr.tif")
 
-fnm2 <- system.file("extdata/DistrictBoundary/GHA_admbndp2_1m_GAUL.shp", package = "EnergyAccess")
-districts <- readOGR(dsn = fnm2, layer = "GHA_admbndp2_1m_GAUL")
+#fnm2 <- system.file("extdata/DistrictBoundary/GHA_admbndp2_1m_GAUL.shp", package = "EnergyAccess")
+districts<-shapefile("inst/extdata/DistrictBoundary/GHA_admbndp2_1m_GAUL.shp")
 
 #Should aggregate to districts first, don't need to rasterize
 #Rasterize district boundary vector
-#zamr <- raster(x = extent(districts), crs = crs(districts), res = 0.1)
-#values(zamr) <- 1:ncell(zamr)
+zamr <- raster(x = extent(districts), crs = crs(districts), res = 0.1)
+values(zamr) <- 1:ncell(zamr)
 #districts$ID <- 1:length(districts)
 #districtsraster <- rasterize(x = districts, y = zamr, field = "ID")
 #districtsraster
-
-#plot_noaxes
-
-plot_noaxes <- function(x, axes = FALSE, box = FALSE, mar = c(0, 0, 1, 4),
-                        ...) {
-  if(!class(x) %in% c("RasterLayer", "RasterStack", "RasterBrick", "Extent")) {
-    stop("This function is intended for rasters only", call. = FALSE)
-  }
-  par(mar = mar)
-  plot(x, axes = axes, box = axes, ...)
-}
 
 #get them to all the same coordinate system (this didn't quite work)
 
@@ -114,7 +103,37 @@ districts$deforest.total <- 100*sapply(deforest.total, mean)
 districts$deforest.0103 <- 100*sapply(deforest.0103, mean)
 districts$deforest.0408 <- 100*sapply(deforest.0408, mean)
 districts$deforest.0914 <- 100*sapply(deforest.0914, mean)
+head(districts)
+#voronoi to district
+dist_albs$deforest03<-round(100*sapply(deforest.0103, mean),3)
+dist_albs$deforest08<-round(100*sapply(deforest.0408, mean),3)
+dist_albs$deforest14<-round(100*sapply(deforest.0914, mean),3)
 
+#interpolated to district
+dist_a$deforest03<-round(100*sapply(deforest.0103, mean),3)
+dist_a$deforest08<-round(100*sapply(deforest.0408, mean),3)
+dist_a$deforest14<-round(100*sapply(deforest.0914, mean),3)
+
+d_map03<-mapview(dist_albs, zcol="deforest03", layer.name="2003 Deforestation", maxpoints=40000000, alpha.regions=100,legend=TRUE)
+d_map08<-mapview(dist_albs, zcol="deforest08", layer.name="2008 Deforestation", maxpoints=40000000, alpha.regions=100,legend=TRUE)
+d_map14<-mapview(dist_albs, zcol="deforest14", layer.name="2014 Deforestation", maxpoints=40000000, alpha.regions=100,legend=TRUE)
+defMaps<-d_map03+d_map08+d_map14
+defMaps
+
+summary(dist_albs)
+sts.ex.sat <- subset(dist_albs@data, select = c("deforest08", "COOKFUEL08"))
+summary(sts.ex.sat)
+cor(sts.ex.sat)
+plot(sts.ex.sat)
+statsss<-lm(ELECTRCHH08 ~ COOKFUEL08, data=dist_albs)
+summary(statsss)
+head(dist_albs@data)
+attach(dist_albs@data)     # attach the data frame
+eruption.lm = lm(deforest14 ~ ELECTRCHH14)
+newdata = data.frame(ELECTRCHH=100)
+predict(eruption.lm, newdata, interval="predict")
+
+detach(dist_albs@data)
 #districts$deforest.total <- 100*districts$deforest.total
 #districts$deforest.0103 <- 100*districts$deforest.0103
 #districts$deforest.0408 <- 100*districts$deforest.0408
