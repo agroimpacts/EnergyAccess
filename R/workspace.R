@@ -12,8 +12,16 @@ library(viridis)
 ### CLEANING SURVEY DATA ###
 #Read in IPUMS Data
 IPUMS<- read.csv(file="inst/extdata/idhs_00003.csv", stringsAsFactors = FALSE)
-
+head(IPUMS)
+qplot(IPUMS$URBAN,
+      geom="histogram",
+      xlab = "Job",
+      binwidth= 0.2,
+      fill=I("blue"),
+      col=I("red"),
+      main = "employment")
 #Reassign into boolean values
+#IPUMS<-subset(IPUMS, URBAN!=1) #activate for rural only analysis
 IPUMS$ELECTRCHH[which(IPUMS$ELECTRCHH ==6 | IPUMS$ELECTRCHH ==8)]<-0
 IPUMS$COOKFUEL[which(IPUMS$COOKFUEL==400 | IPUMS$COOKFUEL==500 | IPUMS$COOKFUEL==520 |IPUMS$COOKFUEL==530) ] <-1
 IPUMS$COOKFUEL[which(IPUMS$COOKFUEL !=1 )]<-0
@@ -40,42 +48,42 @@ library(ggplot2); library(grid)
 qplot(d2003$ELECTRCHH,
       geom="histogram",
       xlab = "Access",
-      binwidth= 0.2,
+      binwidth= 15,
       fill=I("blue"),
       col=I("red"),
       main = "Ghana Energy Access 2003")
 qplot(d2008$ELECTRCHH,
       geom="histogram",
       xlab = "Access",
-      binwidth= 0.2,
+      binwidth= 15,
       fill=I("blue"),
       col=I("red"),
       main = "Ghana Energy Access 2008")
 qplot(d2014$ELECTRCHH,
       geom="histogram",
       xlab = "Access",
-      binwidth= 0.2,
+      binwidth= 15,
       fill=I("blue"),
       col=I("red"),
       main = "Ghana Energy Access 2014")
 qplot(d2003$COOKFUEL,
       geom="histogram",
       xlab = "Wood Use",
-      binwidth= 0.2,
+      binwidth= 15,
       fill=I("blue"),
       col=I("red"),
       main = "Ghana Wood as Cooking Fuel 2003")
 qplot(d2008$COOKFUEL,
       geom="histogram",
-      xlab = "Wood USe",
-      binwidth= 0.2,
+      xlab = "Wood Use",
+      binwidth= 15,
       fill=I("blue"),
       col=I("red"),
       main = "Ghana Wood as Cooking Fuel 2008")
 qplot(d2014$COOKFUEL,
       geom="histogram",
       xlab = "Wood Use",
-      binwidth= 0.2,
+      binwidth= 15,
       fill=I("blue"),
       col=I("red"),
       main = "Ghana Wood as Cooking Fuel 2014")
@@ -93,6 +101,13 @@ clust08M <- merge(clust08, d2008, by.x = "DHSCLUST",
                  by.y = "Group.1")
 clust14M <- merge(clust14, d2014, by.x = "DHSCLUST",
                  by.y = "Group.1")
+cnames<-c("ELECTRCHH","COOKFUEL")
+clust03M<- clust03M[,(names(clust03M) %in% cnames)]
+clust08M<- clust08M[,(names(clust08M) %in% cnames)]
+clust14M<- clust14M[,(names(clust14M) %in% cnames)]
+clust03M <- clust03M[!is.na(clust03M@data$COOKFUEL),]
+clust08M <- clust08M[!is.na(clust08M@data$COOKFUEL),]
+clust14M <- clust14M[!is.na(clust14M@data$COOKFUEL),]
 
 #Import shapefile of Ghana districts
 districts<-shapefile("inst/extdata/DistrictBoundry/GHA_admbndp2_1m_GAUL.shp")
@@ -112,6 +127,7 @@ invdist <- gstat(id = "COOKFUEL", formula = COOKFUEL ~ 1, data = c2003)
 invdistr <- interpolate(object = r, model = invdist)
 invdistrmsk <- mask(x = invdistr, mask = dist_albs)
 plot(invdistrmsk)
+vvala<-over(x=dist_albs, y=x[21:22], fn=mean)
 #kriging (not working for COOKFUEL 2003)
 v6 <- variogram(object = COOKFUEL ~ 1, data = c2003)
 m <- fit.variogram(object = v6, model = vgm("Sph"))
@@ -128,7 +144,6 @@ v_allyrs<-lapply (allyrs, function(x) {
   intersect(v, ghana)
 })
 #interactive maps of voronoi polygons
-install.packages("mapview")
 library("mapview")
 cols<-rev(get_col_regions())
 vc_map03<-mapview(v_allyrs[[1]], zcol="COOKFUEL", popup=NA, layer.name="2003 Wood Use", alpha.regions=100, col="gray27", legend=TRUE, col.regions=cols)
@@ -147,8 +162,9 @@ mapshot(CookvMaps, file = "my_interactive_map.html") #create html
 
 #extract values from voronoi to districts so there arent too many 1's and 0's
 v_district<-lapply(v_allyrs, function(x) {
-  over(x=dist_albs, y=x[21:22], fn=mean)
+  over(x=dist_albs, y=x[1:2], fn=mean)
 })
+v_allyrs[1]
 d03<-as.data.frame(v_district[1])
 d08<-as.data.frame(v_district[2])
 d14<-as.data.frame(v_district[3])
@@ -172,6 +188,13 @@ CookMaps<-c_map03+c_map08+c_map14
 CookMaps
 
 ### ANALYIS ###
+summary(dist_albs)
+sts.ex.sat <- subset(dist_albs@data, select = c("COOKFUEL08", "ELECTRCHH08"))
+summary(sts.ex.sat)
+cor(sts.ex.sat)
+dist_albs@data
+# correlation between expense and csat
+plot(sts.ex.sat)
 sat.mod <- lm(COOKFUEL ~ ELECTRCHH, # regression formula
               data=d14) # data set
 # Summarize and print the results
