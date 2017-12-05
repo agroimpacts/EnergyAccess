@@ -190,8 +190,10 @@ qplot(d2014$COOKFUEL,
       main = "Ghana Wood as Cooking Fuel 2014")
 
 ### MAKING SURVEY DATA SPATIAL ###
+install_github("agroimpacts/EnergyAccess", build_vignettes = TRUE,
+               auth_token = "0969e171e5c360c0f37ca7e00e028c07d78cc9a5")
 #Import survey cluster points
-fnm1 <- system.file("C:/Users/NMcCray/Documents/R/EnergyAccess/inst/extdata/c2003c.shp", package= "EnergyAccess" )
+fnm1 <- system.file("/extdata/c2003c.shp", package= "EnergyAccess")
 #fnm2 <- system.file("extdata/clusters2008/c2008c.shp", package = "EnergyAccess")
 #fnm3 <- system.file("extdata/clusters2014/c2014c.shp", package = "EnergyAccess")
 clust03<-readOGR(fnm1, layer="c2003c") #2003 Survey

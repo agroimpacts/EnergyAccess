@@ -110,6 +110,7 @@ dist_albs$deforest08<-round(100*sapply(deforest.0408, mean),3)
 dist_albs$deforest14<-round(100*sapply(deforest.0914, mean),3)
 
 #interpolated to district
+dist_a<-dist_albs
 dist_a$deforest03<-round(100*sapply(deforest.0103, mean),3)
 dist_a$deforest08<-round(100*sapply(deforest.0408, mean),3)
 dist_a$deforest14<-round(100*sapply(deforest.0914, mean),3)
