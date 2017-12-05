@@ -13,13 +13,7 @@ library(viridis)
 #Read in IPUMS Data
 IPUMS<- read.csv(file="inst/extdata/idhs_00003.csv", stringsAsFactors = FALSE)
 head(IPUMS)
-qplot(IPUMS$URBAN,
-      geom="histogram",
-      xlab = "Job",
-      binwidth= 0.2,
-      fill=I("blue"),
-      col=I("red"),
-      main = "employment")
+
 #Reassign into boolean values
 #IPUMS<-subset(IPUMS, URBAN!=1) #activate for rural only analysis
 IPUMS$ELECTRCHH[which(IPUMS$ELECTRCHH ==6 | IPUMS$ELECTRCHH ==8)]<-0
@@ -152,8 +146,10 @@ dist_a$ELECTRCHH08 <- sapply(v.vals, mean)
 v.vals <- extract(interpolEnergy[[1]], dist_a)
 dist_a$ELECTRCHH03 <- sapply(v.vals, mean)
 
-statsss<-lm(COOKFUEL03 ~ deforest03, data=dist_albs)
-summary(statsss)
+attach(dist_a@data)
+relatedd <- subset(dist_a@data, select = c("deforest03", "ELECTRCHH03"))
+cor(relatedd)
+detach(dist_a@data)
 ### VISUALIZATION ###
 #data displayed in voronoi polygons
 allyrs<-c(c2003, c2008, c2014)
@@ -219,6 +215,112 @@ sat.mod <- lm(COOKFUEL ~ ELECTRCHH, # regression formula
 # Summarize and print the results
 summary(sat.mod)
 plot(sat.mod)
+
+
+#bivariate Morans
+install.packages("dplyr")
+library(dplyr)
+library(ggplot2)
+library(sf)
+install.packages("spdep")
+library(spdep)
+library(rgdal)
+library(stringr)
+y<- dist_a$ELECTRCHH08
+x<- dist_a$deforest08
+
+#======================================================
+# Programming some functions
+
+# Bivariate Moran's I
+moran_I <- function(x, y = NULL, W){
+  if(is.null(y)) y = x
+
+  xp <- (x - mean(x, na.rm=T))/sd(x, na.rm=T)
+  yp <- (y - mean(y, na.rm=T))/sd(y, na.rm=T)
+  W[which(is.na(W))] <- 0
+  n <- nrow(W)
+
+  global <- (xp%*%W%*%yp)/(n - 1)
+  local  <- (xp*W%*%yp)
+  list(global = global, local  = as.numeric(local))
+}
+
+
+
+# Permutations for the Bivariate Moran's I
+simula_moran <- function(x, y = NULL, W, nsims = 1000){
+
+  if(is.null(y)) y = x
+
+  n   = nrow(W)
+  IDs = 1:n
+
+  xp <- (x - mean(x, na.rm=T))/sd(x, na.rm=T)
+  W[which(is.na(W))] <- 0
+
+  global_sims = NULL
+  local_sims  = matrix(NA, nrow = n, ncol=nsims)
+
+  ID_sample = sample(IDs, size = n*nsims, replace = T)
+  y_s = y[ID_sample]
+  y_s = matrix(y_s, nrow = n, ncol = nsims)
+  y_s <- (y_s - apply(y_s, 1, mean))/apply(y_s, 1, sd)
+
+  global_sims  <- as.numeric( (xp%*%W%*%y_s)/(n - 1) )
+  local_sims  <- (xp*W%*%y_s)
+
+  list(global_sims = global_sims,
+       local_sims  = local_sims)
+}
+
+
+#======================================================
+# Adjacency Matrix (Queen)
+
+nb <- poly2nb(dist_a)
+lw <- nb2listw(nb, style = "B", zero.policy = T)
+W  <- as(lw, "symmetricMatrix")
+W  <- as.matrix(W/rowSums(W))
+W[which(is.na(W))] <- 0
+
+#======================================================
+# Calculating the index and its simulated distribution
+# for global and local values
+
+m   <- moran_I(x, y, W)
+m[[1]] # global value
+
+m_i <- m[[2]]  # local values
+
+local_sims <- simula_moran(x, y, W)$local_sims
+
+# Identifying the significant values
+alpha <- .05  # for a 95% confidence interval
+probs <- c(alpha/2, 1-alpha/2)
+intervals <- t( apply(local_sims, 1, function(x) quantile(x, probs=probs)))
+sig <- ( m_i < intervals[,1] )  | ( m_i > intervals[,2] )
+
+#======================================================
+# Preparing for plotting
+
+dist_a03<- st_as_sf(dist_a)
+dist_a03$sig <- sig
+
+
+# Identifying the LISA patterns
+xp <- (x-mean(x))/sd(x)
+yp <- (y-mean(y))/sd(y)
+
+patterns <- as.character( interaction(xp > 0, W%*%yp > 0) )
+patterns <- patterns %>%
+  str_replace_all("TRUE","High") %>%
+  str_replace_all("FALSE","Low")
+patterns[dist_a03$sig==0] <- "Not significant"
+dist_a03$patterns <- patterns
+
+# Plotting
+mapview(dist_a03, zcol="patterns", legend=TRUE)
 #This is the link to download the Hansen data
 #Go to tasks and then download to google drive
 #https://code.earthengine.google.com/d5c909c06ec28626324ecd65c34417f2

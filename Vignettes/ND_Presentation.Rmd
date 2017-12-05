@@ -1,0 +1,218 @@
+---
+title: "Deforestation and Energy Access"
+author: "Nara McCray & Daniel Lassila"
+date: "12/6/2017"
+output:
+  slidy_presentation: default
+  ioslides_presentation: default
+subtitle: Exploring the relationship between energy access and deforestation
+---
+
+```{r html_doc, eval=FALSE, include=FALSE}
+library(rmarkdown)
+render(input = "Nd_Presentation.Rmd", output_format = "html_document", output_file = "ND_Presentation.html")
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(devtools)
+library(knitr)
+getwd()
+``` 
+
+![](..inst/extdata/AfricanAccess.JPG)
+
+```{r, out.width = "900px", echo=FALSE}
+```
+</font>
+
+## What is Energy Access?
+
+<br></br>
+
+- basic forms of energy are available in the form of biofuel such as wood and require labor and time inputs to collect
+-millions of people around the world, disproportionately the poorest and most vulnerable, rely on forests for subsistence
+- Biomass in the form of wood/charcoal is often used as an energy source
+- alternative energy sources such as electricity have been shown to reduce deforestation pressure while also improving the quality of life for people living in rural areas of developing countries
+- 1.1 billion people are living today without access to electricity
+
+
+
+## Deforestation and Energy Access
+
+<br></br>
+
+- Overpopulation and ecoomic development are widely known as contributing factors to deforestation
+- Because rural communities often rely on forests as an energy source, it is estimated that expanding rural electrification access will wean these populations off the consumption of biomass for their energy needs
+- Rural electrification can also be associated with environmental degredation depending on circumstance
+
+<center>
+
+## Objective
+
+
+This research project explores the relationship between deforestation and influencing variables
+  The main variable of interest being energy access
+
+Recent research has found that not only does rural electrification cause deforestation rates to decrease, but also that it is more robust in explaining deforestation than population growth or development
+
+This research was conducted on the national scale with 158 countries, we intend to do a more indepth analysis on one country: Ghana
+
+
+```{r, out.width = "900px", echo=FALSE}
+#knitr::include_graphics("..inst/extdata/AfricanAccess.JPG")
+```
+</font>
+
+##
+
+<font size="18"><center>
+Rapid Increase in Energy Access in Ghana
+
+<center>
+```{r, out.width = "200px", echo=FALSE}
+```
+
+## Methods - Packages
+
+<br></br>
+
+    library(rgdal) - read and write user input files
+    library(raster) - geographic data analysis and modeling
+    library(rgdal) - binding for rgeos library
+    library(lmisc) - miscellaneous functions for plotting 
+                      and performing various tasks
+    library(sp) - classes and methods for spatial analysis
+    library(gdalUtils) - wrappers for the gdal utilities
+    library(rgeos) -  interface to geometry engine
+    library(data.table) - extension of data.frame
+    library(matrixStats) - functions that apply to rows 
+                            and columns of matrices(and vectors)
+    library(EBImage) -   image segmentation/
+                          object classification
+    library(diffeR) - statistical analysis for raster images
+
+## Methods - Part one: classify fairy rings {.smaller}
+
+
+<br></br>
+
+1. Read in the new images from the Orthos 3 (2014) data set
+2. Incorporate the new field of study (north bed) to the analysis 
+3. Use gdal cutline function to mask out the ortho image to only the areas of interest
+4. Green-blue difference the orthos
+5. Invert the colors and histogram-stretch the images to make fairy ring brighter
+6. Use the EBimage package to classify the inverted and stretched non-spatial images 
+7. Blur the images first to remove noise, then thresh, dilate, erode, and label features
+8. Filter out "small" objects by calculating object areas, which are picking up noise
+9. Convert those objects back to rasters and filter again 
+10. Run a second removal process to filter out objects that appear in only a few dates, which are not fairy rings that stay rather constant over time
+11. Unstack the raster brick output of classified images and save them as individual tifs for statistical analysis
+
+## 
+
+<br></br>
+
+<font size="18"><center>
+EBimage result
+
+```{r, out.width = "900px", echo=FALSE}
+
+```
+
+</font></center>
+
+## Methods - Part two: accuracy assessment {.smaller}
+
+<br></br>
+
+1. using the manually validated classification points as truth, assess the accuracy of the EBimage classification method
+2. rasterize validated points to create a reference map for comparison with each classified image
+3. calculate confusion matrix using DiffeR package (crosstabm) to examine errors of omission, comission
+4. present error allocation via quantity, exchange, and total difference between reference and classified maps
+5. make recommendations regarding usage of these thresholds with EBImage classifier
+
+
+## Methods - Part three: compare treatment blocks {.smaller}
+
+<br></br>
+
+1. Read in polygon grids of the north and south bed treatment blocks
+2. Compare with treatments blocks using the grid to extract statistics of change in the area of fairy ring by date using the classified images
+3. Use ANOVA to understand the changes between the 5 treatments blocks plus control block
+
+
+## How Accuracy Assessments work
+
+```{r, out.width = "900px", echo=FALSE}
+
+```
+
+Taken from "Quantity, exchange, and shift components of difference in a square
+contingency table" Pontius and Santacruz 2014. 
+
+## The *DiffeR* Package
+- created by Robert Gilmore Pontius Jr. and Alí Santacruz to incorporate their improved methods for map comparison
+- contains 19 functions for map comparison & accuracy assessment
+- why use it? it has functions for calculating all of the statistics you'll want for interpreting your confusion matrix / contingency table 
+
+## Results
+
+Example result:
+</center>
+`{r, echo = FALSE, warning = FALSE, message = FALSE}
+library(raster)
+library(rgdal)
+library(sp)
+library(diffeR)
+library(knitr)
+library(png)
+#Create first raster
+e <- extent(c("xmin" = 27, "xmax" = 29, "ymin" = -16, "ymax" = -14))  # 1
+r <- raster(x = e, res = 0.25, crs = crs(volcano))  # 2 
+set.seed(1)  
+values(r) <- sample(0:1, size = ncell(r), replace = TRUE)
+rr <- r
+#Create second raster
+set.seed(2)
+values(rr) <- sample(0:1, size = ncell(rr), replace = TRUE)
+
+#PLOT
+#png("vignettes/figures/two_rand_rasters.png", height = 700, width = 700) 
+#par(mfrow = c(1, 2), mar = c(0, 0, 0, 0), bg = "transparent")
+#plot(stack(r, rr), axes = FALSE)
+#dev.off()
+
+include_graphics("../figures/randomrastersplot.png")
+#COMPARE
+kable(diffeR::crosstabm(r, rr, percent = FALSE, population = NULL))
+
+kable(diffeR::differenceMR(r, rr, percent = FALSE))
+`
+
+## Future Work 
+
+<br></br>
+
+1. remove drainage lines from the south bed polygon to improve accuracy of classification
+
+2. calculate accuracy for each date with elegant, polished code 
+
+3. make recommendations for improving the thresholds used in EBImage classification
+
+4. adjust the histogram stretching and "small" object classification thresholds to improve classification
+
+
+## 
+
+<br></br>
+
+<font size="18"><center>
+Thank you!
+
+Questions? Suggestions
+</font></center>
+
+
+
