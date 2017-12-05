@@ -8,6 +8,8 @@ library(gstat)
 library(dismo)
 library(RColorBrewer)
 library(viridis)
+install.packages("mapview")
+library(mapview)
 
 ### CLEANING SURVEY DATA ###
 #Read in IPUMS Data
@@ -159,7 +161,7 @@ v_allyrs<-lapply (allyrs, function(x) {
   intersect(v, ghana)
 })
 #interactive maps of voronoi polygons
-library(mapview)
+
 cols<-rev(get_col_regions())
 vc_map03<-mapview(v_allyrs[[1]], zcol="COOKFUEL", popup=NA, layer.name="2003 Wood Use", alpha.regions=100, col="gray27", legend=TRUE, col.regions=cols)
 vc_map08<-mapview(v_allyrs[[2]], zcol="COOKFUEL", popup=NA, layer.name="2008 Wood Use", alpha.regions=100, col="gray27", legend=TRUE, col.regions=cols)
