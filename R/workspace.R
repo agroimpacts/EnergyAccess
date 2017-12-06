@@ -8,13 +8,11 @@ library(gstat)
 library(dismo)
 library(RColorBrewer)
 library(viridis)
-install.packages("mapview")
 library(mapview)
 
 ### CLEANING SURVEY DATA ###
 #Read in IPUMS Data
 IPUMS<- read.csv(file="inst/extdata/idhs_00003.csv", stringsAsFactors = FALSE)
-head(IPUMS)
 
 #Reassign into boolean values
 #IPUMS<-subset(IPUMS, URBAN!=1) #activate for rural only analysis
@@ -135,23 +133,20 @@ interpolEnergy <- lapply(clist, function(x) {
 
 dist_a<-dist_albs
 v.vals <- extract(interpolCOOK[[3]], dist_a)
-dist_a$COOKFUEL14 <- sapply(v.vals, mean)
+dist_a$COOKFUEL14 <- round(sapply(v.vals, mean))
 v.vals <- extract(interpolCOOK[[2]], dist_a)
-dist_a$COOKFUEL08 <- sapply(v.vals, mean)
+dist_a$COOKFUEL08 <- round(sapply(v.vals, mean))
 v.vals <- extract(interpolCOOK[[1]], dist_a)
-dist_a$COOKFUEL03 <- sapply(v.vals, mean)
+dist_a$COOKFUEL03 <- round(sapply(v.vals, mean))
 
 v.vals <- extract(interpolEnergy[[3]], dist_a)
-dist_a$ELECTRCHH14 <- sapply(v.vals, mean)
+dist_a$ELECTRCHH14 <- round(sapply(v.vals, mean))
 v.vals <- extract(interpolEnergy[[2]], dist_a)
-dist_a$ELECTRCHH08 <- sapply(v.vals, mean)
+dist_a$ELECTRCHH08 <- round(sapply(v.vals, mean))
 v.vals <- extract(interpolEnergy[[1]], dist_a)
-dist_a$ELECTRCHH03 <- sapply(v.vals, mean)
+dist_a$ELECTRCHH03 <- round(sapply(v.vals, mean))
 
-attach(dist_a@data)
-relatedd <- subset(dist_a@data, select = c("deforest03", "ELECTRCHH03"))
-cor(relatedd)
-detach(dist_a@data)
+
 ### VISUALIZATION ###
 #data displayed in voronoi polygons
 allyrs<-c(c2003, c2008, c2014)
@@ -204,21 +199,62 @@ c_map14<-mapview(dist_albs, zcol="COOKFUEL14", layer.name="2014 Wood Use", maxpo
 CookMaps<-c_map03+c_map08+c_map14
 CookMaps
 
+####RASTER SECTION####
+fnm5 <- file.path("C:/Users/NMcCray/Documents/R/EnergyAccess/inst/extdata/HansenAllyr.tif")
+deforestation <- raster(fnm5)
+zamr <- raster(x = extent(districts), crs = crs(districts), res = 0.1)
+values(zamr) <- 1:ncell(zamr)
+
+zamr_alb <- projectRaster(from = zamr, res = 2500, crs = crs(dist_a),
+                          method = "ngb")
+
+deforest_alb <- projectRaster(from = deforestation, to = zamr_alb, method = "ngb")
+rclmat <- matrix(
+  c(0, 0.9, 0, 0.99, 16, 1),
+  nrow = 2,
+  ncol = 3,
+  byrow = TRUE)
+
+rclmat1 <- matrix(
+  c(0, 0.9, 0, 0.99, 3.9, 1, 3.99, 16, 0),
+  nrow = 3,
+  ncol = 3,
+  byrow = TRUE)
+
+rclmat2 <- matrix(
+  c(0, 3.9, 0, 3.99, 8.9, 1, 8.99, 16, 0),
+  nrow = 3,
+  ncol = 3,
+  byrow = TRUE)
+
+rclmat3 <- matrix(
+  c(0, 8.9, 0, 8.99, 14.9, 1, 14.99, 16, 0),
+  nrow = 3,
+  ncol = 3,
+  byrow = TRUE)
+
+totaldeforestclass <- reclassify(x = deforest_alb, rcl = rclmat, include.lowest = TRUE)
+
+deforestclass0103 <- reclassify(x = deforest_alb, rcl = rclmat1, include.lowest = TRUE)
+
+deforestclass0408 <- reclassify(x = deforest_alb, rcl = rclmat2, include.lowest = TRUE)
+
+deforestclass0914 <- reclassify(x = deforest_alb, rcl = rclmat3, include.lowest = TRUE)
+
+deforest.total <- extract(totaldeforestclass, dist_a)
+deforest.0103 <- extract(deforestclass0103, dist_a)
+deforest.0408 <- extract(deforestclass0408, dist_a)
+deforest.0914 <- extract(deforestclass0914, dist_a)
+
+
+#aggregated to district
+
+dist_a$deforest03<-round(100*sapply(deforest.0103, mean),3)
+dist_a$deforest08<-round(100*sapply(deforest.0408, mean),3)
+dist_a$deforest14<-round(100*sapply(deforest.0914, mean),3)
 ### ANALYIS ###
-summary(dist_albs)
-sts.ex.sat <- subset(dist_albs@data, select = c("COOKFUEL08", "ELECTRCHH08"))
-summary(sts.ex.sat)
-cor(sts.ex.sat)
-dist_albs@data
-# correlation between expense and csat
-plot(sts.ex.sat)
-sat.mod <- lm(COOKFUEL ~ ELECTRCHH, # regression formula
-              data=d14) # data set
-# Summarize and print the results
-summary(sat.mod)
-plot(sat.mod)
-
-
+##OLS###
+####BIVARIATE LOCAL SPATIAL AUTOCORRELATION####
 #bivariate Morans
 install.packages("dplyr")
 library(dplyr)
@@ -228,9 +264,9 @@ install.packages("spdep")
 library(spdep)
 library(rgdal)
 library(stringr)
-y<- dist_a$ELECTRCHH08
-x<- dist_a$deforest08
-
+y<- dist_a$ELECTRCHH14
+x<- dist_a$deforest14
+head(dist_a@data)
 #======================================================
 # Programming some functions
 
