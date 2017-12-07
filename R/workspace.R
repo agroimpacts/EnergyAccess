@@ -9,7 +9,7 @@ library(dismo)
 library(RColorBrewer)
 library(viridis)
 library(mapview)
-
+?addExtent
 ### CLEANING SURVEY DATA ###
 #Read in IPUMS Data
 IPUMS<- read.csv(file="inst/extdata/idhs_00003.csv", stringsAsFactors = FALSE)
@@ -264,8 +264,8 @@ install.packages("spdep")
 library(spdep)
 library(rgdal)
 library(stringr)
-y<- dist_a$ELECTRCHH14
-x<- dist_a$deforest14
+y<- dist_a$ELECTRCHH03
+x<- dist_a$deforest03
 head(dist_a@data)
 #======================================================
 # Programming some functions
@@ -358,7 +358,7 @@ patterns[dist_a03$sig==0] <- "Not significant"
 dist_a03$patterns <- patterns
 
 # Plotting
-mapview(dist_a03, zcol="patterns", legend=TRUE)
+mapview(dist_a03, zcol="patterns", legend=TRUE, alpha=0, maxpoints=40000000, alpha.regions=80, layer.name="BiLISA: Deforestation and EA")
 #This is the link to download the Hansen data
 #Go to tasks and then download to google drive
 #https://code.earthengine.google.com/d5c909c06ec28626324ecd65c34417f2
