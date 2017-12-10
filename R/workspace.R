@@ -9,9 +9,11 @@ library(dismo)
 library(RColorBrewer)
 library(viridis)
 library(mapview)
-?addExtent
+library(ggplot2)
+library(grid)
+#======================================================
 ### CLEANING SURVEY DATA ###
-#Read in IPUMS Data
+## READ/CLEAN IPUMS DATA ##
 IPUMS<- read.csv(file="inst/extdata/idhs_00003.csv", stringsAsFactors = FALSE)
 
 #Reassign into boolean values
@@ -19,9 +21,10 @@ IPUMS<- read.csv(file="inst/extdata/idhs_00003.csv", stringsAsFactors = FALSE)
 IPUMS$ELECTRCHH[which(IPUMS$ELECTRCHH ==6 | IPUMS$ELECTRCHH ==8)]<-0
 IPUMS$COOKFUEL[which(IPUMS$COOKFUEL==400 | IPUMS$COOKFUEL==500 | IPUMS$COOKFUEL==520 |IPUMS$COOKFUEL==530) ] <-1
 IPUMS$COOKFUEL[which(IPUMS$COOKFUEL !=1 )]<-0
+IPUMS$EDUCLVL[which(IPUMS$EDUCLVL==2 | IPUMS$EDUCLVL==3 | IPUMS$EDUCLVL==8)] <-1
 
 #Create seperate tables for 3 time intervals
-C_erase<-c("SAMPLE","URBAN","CLUSTERNO", "ELECTRCHH", "COOKFUEL")
+C_erase<-c("SAMPLE","URBAN","CLUSTERNO", "ELECTRCHH", "COOKFUEL", "EDUCLVL")
 data2003<- IPUMS[IPUMS$SAMPLE==2884, names(IPUMS) %in% C_erase]
 data2008<- IPUMS[IPUMS$SAMPLE==2885, names(IPUMS) %in% C_erase]
 data2014<- IPUMS[IPUMS$SAMPLE==2886, names(IPUMS) %in% C_erase]
@@ -29,17 +32,16 @@ data2014<- IPUMS[IPUMS$SAMPLE==2886, names(IPUMS) %in% C_erase]
 #Aggregate to Cluster number by averaging values
 d2003<-aggregate(data2003[, 4:5], list(data2003$CLUSTERNO), mean)
 d2008<-aggregate(data2008[, 4:5], list(data2008$CLUSTERNO), mean)
-d2014<-aggregate(data2014[, 4:5], list(data2014$CLUSTERNO), mean)
+d2014<-aggregate(data2014[, 4:6], list(data2014$CLUSTERNO), mean)
 d2003$COOKFUEL<-round(d2003$COOKFUEL, 3)*100
 d2003$ELECTRCHH<-round(d2003$ELECTRCHH, 3)*100
 d2008$COOKFUEL<-round(d2008$COOKFUEL, 3)*100
 d2008$ELECTRCHH<-round(d2008$ELECTRCHH, 3)*100
 d2014$COOKFUEL<-round(d2014$COOKFUEL, 3)*100
 d2014$ELECTRCHH<-round(d2014$ELECTRCHH, 3)*100
+d2014$EDUCLVL<-round(d2014$EDUCLVL, 3)*100
 
 #Descriptive stats
-library(ggplot2); library(grid)
-
 qplot(d2003$ELECTRCHH,
       geom="histogram",
       xlab = "Access",
@@ -82,8 +84,23 @@ qplot(d2014$COOKFUEL,
       fill=I("blue"),
       col=I("red"),
       main = "Ghana Wood as Cooking Fuel 2014")
+qplot(d2014$EDUCLVL,
+      geom="histogram",
+      xlab = "Educated Women",
+      binwidth= 15,
+      fill=I("blue"),
+      col=I("red"),
+      main = "Female Survey Respondents Educated 2014")
 
-### MAKING SURVEY DATA SPATIAL ###
+## READ/CLEAN DHS STATCOMPILER DATA ##
+#these variables will be used for multivariate regression for 2014 only
+DHS<- read.csv(file="inst/extdata/clusters2014/GHGC71FL.csv", stringsAsFactors = FALSE)
+C_erase<-c("DHSCLUST","All_Population_Density_2015","BUILT_Population_2014")
+dataDHS<- DHS[, names(DHS) %in% C_erase] #clean out unncessary attributes
+colnames(dataDHS)<-c("DHSCLUST", "Pop15", "Built14")
+dataDHS$Built14<-round(dataDHS$Built14, 4)
+
+## MAKING SURVEY DATA SPATIAL ##
 #Import survey cluster points
 clust03<-shapefile("inst/extdata/clusters2003/c2003c.shp") #2003 Survey
 clust08<-shapefile("inst/extdata/clusters2008/c2008c.shp") #2008 Survey
@@ -96,10 +113,14 @@ clust08M <- merge(clust08, d2008, by.x = "DHSCLUST",
                  by.y = "Group.1")
 clust14M <- merge(clust14, d2014, by.x = "DHSCLUST",
                  by.y = "Group.1")
+clust14M <- merge(clust14M, dataDHS, by.x = "DHSCLUST",
+                  by.y ="DHSCLUST") #add columns for Built and Population
+
 cnames<-c("ELECTRCHH","COOKFUEL")
+cnames1<-c("ELECTRCHH","COOKFUEL","EDUCLVL","Pop15","Built14")
 clust03M<- clust03M[,(names(clust03M) %in% cnames)]
 clust08M<- clust08M[,(names(clust08M) %in% cnames)]
-clust14M<- clust14M[,(names(clust14M) %in% cnames)]
+clust14M<- clust14M[,(names(clust14M) %in% cnames1)]
 clust03M <- clust03M[!is.na(clust03M@data$COOKFUEL),]
 clust08M <- clust08M[!is.na(clust08M@data$COOKFUEL),]
 clust14M <- clust14M[!is.na(clust14M@data$COOKFUEL),]
@@ -117,89 +138,63 @@ c2014<-spTransform(x=clust14M, CRSobj=proj4string(dist_albs))
 clist<-c(c2003, c2008, c2014)
 
 #Inverse Distance Weighing Interpolation of points
-r <- raster(extent(dist_albs), res = 2000, crs = crs(dist_albs),
+r <- raster(extent(dist_albs), res = 2000, crs = crs(dist_albs), #create blank raster
             vals = 1)
 
-interpolCOOK <- lapply(clist, function(x) {
+interpolCOOK <- lapply(clist, function(x) { #interpolate cluster point values to raster surface
   a <- gstat(id = "COOKFUEL", formula = COOKFUEL ~ 1, data = x)
   b <- interpolate(object = r, model = a)
   c <- mask(x = b, mask = dist_albs)
 })
-interpolEnergy <- lapply(clist, function(x) {
+interpolEnergy <- lapply(clist, function(x) { #interpolate cluster point values to raster surface
   a <- gstat(id = "ELECTRCHH", formula = ELECTRCHH ~ 1, data = x)
   b <- interpolate(object = r, model = a)
   c <- mask(x = b, mask = dist_albs)
 })
 
+#EDUCATION interpolate cluster point values to raster surface
+a <- gstat(id = "EDUCLVL", formula = EDUCLVL ~ 1, data = c2014)
+b <- interpolate(object = r, model = a)
+c <- mask(x = b, mask = dist_albs)
+#POPULATION interpolate cluster point values to raster surface
+a1 <- gstat(id = "Pop15", formula = Pop15 ~ 1, data = c2014)
+b1 <- interpolate(object = r, model = a1)
+c1 <- mask(x = b1, mask = dist_albs)
+
+#BUILT AREAS interpolate cluster point values to raster surface
+a2 <- gstat(id = "Built14", formula = Built14 ~ 1, data = c2014)
+b2 <- interpolate(object = r, model = a2)
+c2 <- mask(x = b2, mask = dist_albs)
+
+## INTERPOLATED RASTER to DISTRICTS ##
 dist_a<-dist_albs
+#Wood as Cooking Fuel
 v.vals <- extract(interpolCOOK[[3]], dist_a)
 dist_a$COOKFUEL14 <- round(sapply(v.vals, mean))
 v.vals <- extract(interpolCOOK[[2]], dist_a)
 dist_a$COOKFUEL08 <- round(sapply(v.vals, mean))
 v.vals <- extract(interpolCOOK[[1]], dist_a)
 dist_a$COOKFUEL03 <- round(sapply(v.vals, mean))
-
+#Energy Access
 v.vals <- extract(interpolEnergy[[3]], dist_a)
 dist_a$ELECTRCHH14 <- round(sapply(v.vals, mean))
 v.vals <- extract(interpolEnergy[[2]], dist_a)
 dist_a$ELECTRCHH08 <- round(sapply(v.vals, mean))
 v.vals <- extract(interpolEnergy[[1]], dist_a)
 dist_a$ELECTRCHH03 <- round(sapply(v.vals, mean))
+#Education
+v.vals <- extract(c, dist_a)
+dist_a$EDUCLVL14 <- round(sapply(v.vals, mean))
+#Population
+v.vals <- extract(c1, dist_a)
+dist_a$Pop15 <- round(sapply(v.vals, mean), 3)
+#Built Areas
+v.vals <- extract(c2, dist_a)
+dist_a$Built14 <- round(sapply(v.vals, mean), 4)
 
-
-### VISUALIZATION ###
-#data displayed in voronoi polygons
-allyrs<-c(c2003, c2008, c2014)
-ghana <- aggregate(dist_albs)
-v_allyrs<-lapply (allyrs, function(x) {
-  v<- voronoi(x)
-  intersect(v, ghana)
-})
-#interactive maps of voronoi polygons
-
-cols<-rev(get_col_regions())
-vc_map03<-mapview(v_allyrs[[1]], zcol="COOKFUEL", popup=NA, layer.name="2003 Wood Use", alpha.regions=100, col="gray27", legend=TRUE, col.regions=cols)
-vc_map08<-mapview(v_allyrs[[2]], zcol="COOKFUEL", popup=NA, layer.name="2008 Wood Use", alpha.regions=100, col="gray27", legend=TRUE, col.regions=cols)
-vc_map14<-mapview(v_allyrs[[3]], zcol="COOKFUEL", popup=NA, layer.name="2014 Wood Use", alpha.regions=100, col= "gray27", legend=TRUE, col.regions=cols)
-CookvMaps=vc_map03+vc_map08+vc_map14
-CookvMaps
-ve_map03<-mapview(v_allyrs[[1]], zcol="ELECTRCHH", popup=NA, layer.name="2003 Energy Access", alpha.regions=100, col= "gray27", legend=TRUE, col.regions=cols)
-ve_map08<-mapview(v_allyrs[[2]], zcol="ELECTRCHH", popup=NA, layer.name="2008 Energy Access", alpha.regions=100, col= "gray27", legend=TRUE, col.regions=cols)
-ve_map14<-mapview(v_allyrs[[3]], zcol="ELECTRCHH", popup=NA, layer.name="2014 Energy Access", alpha.regions=100, col= "gray27", legend=TRUE, col.regions=cols)
-ElecvMaps=ve_map03+ve_map08+ve_map14
-ElecvMaps
-webshot::install_phantomjs()
-mapshot(CookvMaps, file = "my_interactive_map.html") #create html
-?mapview
-
-#extract values from voronoi to districts so there arent too many 1's and 0's
-v_district<-lapply(v_allyrs, function(x) {
-  over(x=dist_albs, y=x[1:2], fn=mean)
-})
-v_allyrs[1]
-d03<-as.data.frame(v_district[1])
-d08<-as.data.frame(v_district[2])
-d14<-as.data.frame(v_district[3])
-dist_albs$COOKFUEL03<-round(d03[,"COOKFUEL"],3)
-dist_albs$ELECTRCHH03<-round(d03[,"ELECTRCHH"],3)
-dist_albs$COOKFUEL08<-round(d08[,"COOKFUEL"],3)
-dist_albs$ELECTRCHH08<-round(d08[,"ELECTRCHH"],3)
-dist_albs$COOKFUEL14<-round(d14[,"COOKFUEL"],3)
-dist_albs$ELECTRCHH14<-round(d14[,"ELECTRCHH"],3)
-
-#interactive maps of districts
-e_map03<-mapview(dist_albs, zcol="ELECTRCHH03", layer.name="2003 Energy Access", maxpoints=40000000, alpha.regions=100,legend=TRUE)
-e_map08<-mapview(dist_albs, zcol="ELECTRCHH08", layer.name="2008 Energy Access", maxpoints=40000000, alpha.regions=100,legend=TRUE)
-e_map14<-mapview(dist_albs, zcol="ELECTRCHH14", layer.name="2014 Energy Access", maxpoints=40000000, alpha.regions=100,legend=TRUE)
-ElecMaps=e_map03+ e_map08 +e_map14
-ElecMaps
-c_map03<-mapview(dist_albs, zcol="COOKFUEL03", layer.name="2003 Wood Use", maxpoints=40000000, alpha.regions=100,legend=TRUE)
-c_map08<-mapview(dist_albs, zcol="COOKFUEL08", layer.name="2008 Wood Use", maxpoints=40000000, alpha.regions=100,legend=TRUE)
-c_map14<-mapview(dist_albs, zcol="COOKFUEL14", layer.name="2014 Wood Use", maxpoints=40000000, alpha.regions=100,legend=TRUE)
-CookMaps<-c_map03+c_map08+c_map14
-CookMaps
-
-####RASTER SECTION####
+#======================================================
+#### RASTER SECTION ####
+## DEFORESTATION ##
 fnm5 <- file.path("C:/Users/NMcCray/Documents/R/EnergyAccess/inst/extdata/HansenAllyr.tif")
 deforestation <- raster(fnm5)
 zamr <- raster(x = extent(districts), crs = crs(districts), res = 0.1)
@@ -209,50 +204,100 @@ zamr_alb <- projectRaster(from = zamr, res = 2500, crs = crs(dist_a),
                           method = "ngb")
 
 deforest_alb <- projectRaster(from = deforestation, to = zamr_alb, method = "ngb")
-rclmat <- matrix(
+rclmat <- matrix( #all deforestation since 2001
   c(0, 0.9, 0, 0.99, 16, 1),
   nrow = 2,
   ncol = 3,
   byrow = TRUE)
 
-rclmat1 <- matrix(
+rclmat1 <- matrix( #deforestation from 2001-2003
   c(0, 0.9, 0, 0.99, 3.9, 1, 3.99, 16, 0),
   nrow = 3,
   ncol = 3,
   byrow = TRUE)
 
-rclmat2 <- matrix(
+rclmat2 <- matrix( #deforestation from 2003-2008
   c(0, 3.9, 0, 3.99, 8.9, 1, 8.99, 16, 0),
   nrow = 3,
   ncol = 3,
   byrow = TRUE)
 
-rclmat3 <- matrix(
+rclmat3 <- matrix( #deforestation from 2008-2014
   c(0, 8.9, 0, 8.99, 14.9, 1, 14.99, 16, 0),
   nrow = 3,
   ncol = 3,
   byrow = TRUE)
 
 totaldeforestclass <- reclassify(x = deforest_alb, rcl = rclmat, include.lowest = TRUE)
-
 deforestclass0103 <- reclassify(x = deforest_alb, rcl = rclmat1, include.lowest = TRUE)
-
 deforestclass0408 <- reclassify(x = deforest_alb, rcl = rclmat2, include.lowest = TRUE)
-
 deforestclass0914 <- reclassify(x = deforest_alb, rcl = rclmat3, include.lowest = TRUE)
 
-deforest.total <- extract(totaldeforestclass, dist_a)
+#extract values
+deforest.all <-extract(totaldeforestclass, dist_a)
 deforest.0103 <- extract(deforestclass0103, dist_a)
 deforest.0408 <- extract(deforestclass0408, dist_a)
 deforest.0914 <- extract(deforestclass0914, dist_a)
 
-
 #aggregated to district
-
+dist_a$deforestALL<-round(100*sapply(deforest.all, mean),3)
 dist_a$deforest03<-round(100*sapply(deforest.0103, mean),3)
 dist_a$deforest08<-round(100*sapply(deforest.0408, mean),3)
 dist_a$deforest14<-round(100*sapply(deforest.0914, mean),3)
+
+
+## CROPLAND ##
+fnm6 <- file.path("C:/Users/NMcCray/Documents/R/EnergyAccess/inst/extdata/LandUse2009.tif")
+CLand <- raster(fnm6)
+CLand_alb <- projectRaster(from = CLand, to = zamr_alb, method = "ngb") #project
+
+rcc1 <- matrix(
+  c(0, 31, 1, 39, 231, 0),
+  nrow = 2,
+  ncol = 3,
+  byrow = TRUE)
+
+CLand_RC <- reclassify(x = CLand_alb, rcl = rcc1, include.lowest = TRUE)
+CLand_RC_e <- extract(CLand_RC, dist_a)
+dist_a$crop09<-round(100*sapply(CLand_RC_e, mean),3) #aggregate crop % values to district
+#======================================================
+### VISUALATION ###
+
+cols<-rev(get_col_regions()) #add col.regions=cols for reveresed and new colors
+e_map03<-mapview(dist_a, zcol="ELECTRCHH03", layer.name="2003 Energy Access", maxpoints=40000000, alpha.regions=100,legend=TRUE)
+e_map08<-mapview(dist_a, zcol="ELECTRCHH08", layer.name="2008 Energy Access", maxpoints=40000000, alpha.regions=100,legend=TRUE)
+e_map14<-mapview(dist_a, zcol="ELECTRCHH14", layer.name="2014 Energy Access", maxpoints=40000000, alpha.regions=100,legend=TRUE)
+ElecMaps=e_map03+ e_map08 +e_map14
+ElecMaps
+c_map03<-mapview(dist_a, zcol="COOKFUEL03", layer.name="2003 Wood Use", maxpoints=40000000, alpha.regions=100,legend=TRUE)
+c_map08<-mapview(dist_a, zcol="COOKFUEL08", layer.name="2008 Wood Use", maxpoints=40000000, alpha.regions=100,legend=TRUE)
+c_map14<-mapview(dist_a, zcol="COOKFUEL14", layer.name="2014 Wood Use", maxpoints=40000000, alpha.regions=100,legend=TRUE)
+CookMaps<-c_map03+c_map08+c_map14
+CookMaps
+d_map03<-mapview(dist_a, zcol="deforest03", layer.name="2003 Deforestation", maxpoints=40000000, alpha.regions=100,legend=TRUE)
+d_map08<-mapview(dist_a, zcol="deforest08", layer.name="2008 Deforestation", maxpoints=40000000, alpha.regions=100,legend=TRUE)
+d_map14<-mapview(dist_a, zcol="deforest14", layer.name="2014 Deforestation", maxpoints=40000000, alpha.regions=100,legend=TRUE)
+defMaps<-d_map03+d_map08+d_map14
+defMaps
+
+#======================================================
 ### ANALYIS ###
+##Multivariate Regression##
+head(dist_a)
+fit<-lm(deforestALL ~ COOKFUEL14 + ELECTRCHH14 + Pop15 + EDUCLVL14 + Built14 + crop09, data= dist_a)
+summary(fit)
+coefficients(fit)
+confint(fit, level=0.95) #confidence intervals
+fitted(fit)
+plot(residuals(fit))
+anova(fit)
+layout(matrix(c(1,2,3,4),2,2))
+plot(fit)
+
+library(MASS)
+step<- stepAIC(fit, direction="both")
+step$anova
+
 ##OLS###
 ####BIVARIATE LOCAL SPATIAL AUTOCORRELATION####
 #bivariate Morans
@@ -267,7 +312,6 @@ library(stringr)
 y<- dist_a$ELECTRCHH03
 x<- dist_a$deforest03
 head(dist_a@data)
-#======================================================
 # Programming some functions
 
 # Bivariate Moran's I
@@ -362,3 +406,6 @@ mapview(dist_a03, zcol="patterns", legend=TRUE, alpha=0, maxpoints=40000000, alp
 #This is the link to download the Hansen data
 #Go to tasks and then download to google drive
 #https://code.earthengine.google.com/d5c909c06ec28626324ecd65c34417f2
+#This is the link to download the Cropland data
+#Go to tasks and then download to google drive
+#https://code.earthengine.google.com/594731702af6ef064128e784a632a0e8
