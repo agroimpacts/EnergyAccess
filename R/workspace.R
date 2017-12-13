@@ -10,7 +10,9 @@ library(RColorBrewer)
 library(viridis)
 library(mapview)
 library(ggplot2)
-library(grid)
+library(reshape2)
+library(gridExtra) #arranging ggplots in grid
+library(grid) #arranging ggplots in grid
 #======================================================
 ### CLEANING SURVEY DATA ###
 ## READ/CLEAN IPUMS DATA ##
@@ -41,56 +43,6 @@ d2014$COOKFUEL<-round(d2014$COOKFUEL, 3)*100
 d2014$ELECTRCHH<-round(d2014$ELECTRCHH, 3)*100
 d2014$EDUCLVL<-round(d2014$EDUCLVL, 3)*100
 
-#Descriptive stats
-qplot(d2003$ELECTRCHH,
-      geom="histogram",
-      xlab = "Access",
-      binwidth= 15,
-      fill=I("blue"),
-      col=I("red"),
-      main = "Ghana Energy Access 2003")
-qplot(d2008$ELECTRCHH,
-      geom="histogram",
-      xlab = "Access",
-      binwidth= 15,
-      fill=I("blue"),
-      col=I("red"),
-      main = "Ghana Energy Access 2008")
-qplot(d2014$ELECTRCHH,
-      geom="histogram",
-      xlab = "Access",
-      binwidth= 15,
-      fill=I("blue"),
-      col=I("red"),
-      main = "Ghana Energy Access 2014")
-qplot(d2003$COOKFUEL,
-      geom="histogram",
-      xlab = "Wood Use",
-      binwidth= 15,
-      fill=I("blue"),
-      col=I("red"),
-      main = "Ghana Wood as Cooking Fuel 2003")
-qplot(d2008$COOKFUEL,
-      geom="histogram",
-      xlab = "Wood Use",
-      binwidth= 15,
-      fill=I("blue"),
-      col=I("red"),
-      main = "Ghana Wood as Cooking Fuel 2008")
-qplot(d2014$COOKFUEL,
-      geom="histogram",
-      xlab = "Wood Use",
-      binwidth= 15,
-      fill=I("blue"),
-      col=I("red"),
-      main = "Ghana Wood as Cooking Fuel 2014")
-qplot(d2014$EDUCLVL,
-      geom="histogram",
-      xlab = "Educated Women",
-      binwidth= 15,
-      fill=I("blue"),
-      col=I("red"),
-      main = "Female Survey Respondents Educated 2014")
 
 ## READ/CLEAN DHS STATCOMPILER DATA ##
 #these variables will be used for multivariate regression for 2014 only
@@ -127,6 +79,7 @@ clust14M <- clust14M[!is.na(clust14M@data$COOKFUEL),]
 
 #Import shapefile of Ghana districts
 districts<-shapefile("inst/extdata/DistrictBoundary/GHA_admbndp2_1m_GAUL.shp")
+
 districts <- districts[,(names(districts) %in% "HRname")] #keep column with district names
 
 #project files to Albers Equal Area
@@ -169,19 +122,19 @@ c2 <- mask(x = b2, mask = dist_albs)
 ## INTERPOLATED RASTER to DISTRICTS ##
 dist_a<-dist_albs
 #Wood as Cooking Fuel
-v.vals <- extract(interpolCOOK[[3]], dist_a)
-dist_a$COOKFUEL14 <- round(sapply(v.vals, mean))
-v.vals <- extract(interpolCOOK[[2]], dist_a)
-dist_a$COOKFUEL08 <- round(sapply(v.vals, mean))
 v.vals <- extract(interpolCOOK[[1]], dist_a)
 dist_a$COOKFUEL03 <- round(sapply(v.vals, mean))
+v.vals <- extract(interpolCOOK[[2]], dist_a)
+dist_a$COOKFUEL08 <- round(sapply(v.vals, mean))
+v.vals <- extract(interpolCOOK[[3]], dist_a)
+dist_a$COOKFUEL14 <- round(sapply(v.vals, mean))
 #Energy Access
-v.vals <- extract(interpolEnergy[[3]], dist_a)
-dist_a$ELECTRCHH14 <- round(sapply(v.vals, mean))
-v.vals <- extract(interpolEnergy[[2]], dist_a)
-dist_a$ELECTRCHH08 <- round(sapply(v.vals, mean))
 v.vals <- extract(interpolEnergy[[1]], dist_a)
 dist_a$ELECTRCHH03 <- round(sapply(v.vals, mean))
+v.vals <- extract(interpolEnergy[[2]], dist_a)
+dist_a$ELECTRCHH08 <- round(sapply(v.vals, mean))
+v.vals <- extract(interpolEnergy[[3]], dist_a)
+dist_a$ELECTRCHH14 <- round(sapply(v.vals, mean))
 #Education
 v.vals <- extract(c, dist_a)
 dist_a$EDUCLVL14 <- round(sapply(v.vals, mean))
@@ -263,22 +216,63 @@ dist_a$crop09<-round(100*sapply(CLand_RC_e, mean),3) #aggregate crop % values to
 #======================================================
 ### VISUALATION ###
 
+#Descriptive stats
+#scatter plots
+
+#>>>Energy Access
+elecdf = data.frame(count = c(1:139), dist_a@data[,5:7])
+colnames(elecdf)<-c("count","energy access 2003","energy access 2008","energy access 2014")
+elecdf.m = melt(elecdf, id.vars ="count", measure.vars = c("energy access 2003","energy access 2008","energy access 2014"))
+p1<-ggplot(elecdf.m, aes(count, value, colour = variable)) + geom_point() + ylim(0,100)+stat_smooth(method=lm)+ ggtitle("Energy Access") +theme(plot.title = element_text(color="#666666", face="bold", size=23, hjust=0))+labs(x="District #",y="% of Electrified Dwellings")+theme(axis.title = element_text( color="#666666", face="bold", size=13))
+
+#>>>Wood Use
+cookdf = data.frame(count = c(1:139), dist_a@data[,2:4])
+colnames(cookdf)<-c("count","wood use 2003","wood use 2008","wood use 2014")
+cookdf.m = melt(cookdf, id.vars ="count", measure.vars = c("wood use 2003","wood use 2008","wood use 2014"))
+p2<-ggplot(cookdf.m, aes(count, value, colour = variable)) + geom_point() + ylim(0,100)+stat_smooth(method=lm)+ ggtitle("Wood Use as Cooking Fuel") +theme(plot.title = element_text(color="#666666", face="bold", size=23, hjust=0))+labs(x="District #",y="% of Wood Use")+theme(axis.title = element_text( color="#666666", face="bold", size=13))
+
+#>>>Deforestation
+defdf = data.frame(count = c(1:139), dist_a@data[,12:14])
+colnames(defdf)<-c("count","deforestation 2003","deforestation 2008","deforestation 2014")
+defdf.m = melt(defdf, id.vars ="count", measure.vars = c("deforestation 2003","deforestation 2008","deforestation 2014"))
+head(defdf.m)
+p3<-ggplot(defdf.m, aes(count, value, colour = variable)) + geom_point() + ylim(0,15)+stat_smooth(method=lm)+ ggtitle("Deforestation") +theme(plot.title = element_text(color="#666666", face="bold", size=23, hjust=0))+labs(x="District #",y="% of Area Deforested")+theme(axis.title = element_text( color="#666666", face="bold", size=13))
+
+grid.arrange(p1,p2,p3, nrow=3) #OUTPUT
+
+#histograms
+h1<-ggplot(data = elecdf.m, mapping = aes(x = value, fill=variable)) +
+  geom_histogram(bins = 10) + facet_wrap(~variable) #energy access
+h2<-ggplot(data = cookdf.m, mapping = aes(x = value, fill=variable)) +
+  geom_histogram(bins = 10) + facet_wrap(~variable) #Wood
+h3<-ggplot(data = defdf.m, mapping = aes(x = value, fill=variable)) +
+  geom_histogram(bins = 10) + facet_wrap(~variable) #Deforestation
+
+grid.arrange(h1,h2,h3, nrow=3) #OUTPUT
+
+#maps
+scale<-seq(0, 100, 10) #standardize legend scale
+scaleD<-seq(0, 20, 2) #scale for deforesataion legends
 cols<-rev(get_col_regions()) #add col.regions=cols for reveresed and new colors
-e_map03<-mapview(dist_a, zcol="ELECTRCHH03", layer.name="2003 Energy Access", maxpoints=40000000, alpha.regions=100,legend=TRUE)
-e_map08<-mapview(dist_a, zcol="ELECTRCHH08", layer.name="2008 Energy Access", maxpoints=40000000, alpha.regions=100,legend=TRUE)
-e_map14<-mapview(dist_a, zcol="ELECTRCHH14", layer.name="2014 Energy Access", maxpoints=40000000, alpha.regions=100,legend=TRUE)
+Mtype<-c("CartoDB.Positron") #basemap
+
+e_map03<-mapview(dist_a, zcol="ELECTRCHH03", col.regions=cols, layer.name="2003 Energy Access", maxpoints=40000000, alpha.regions=100,legend=TRUE, at= scale, map.types=Mtype)
+e_map08<-mapview(dist_a, zcol="ELECTRCHH08", col.regions=cols, layer.name="2008 Energy Access", maxpoints=40000000, alpha.regions=100,legend=TRUE, at= scale, map.types=Mtype)
+e_map14<-mapview(dist_a, zcol="ELECTRCHH14", col.regions=cols, layer.name="2014 Energy Access", maxpoints=40000000, alpha.regions=100,legend=TRUE, at= scale, map.types=Mtype)
 ElecMaps=e_map03+ e_map08 +e_map14
-ElecMaps
-c_map03<-mapview(dist_a, zcol="COOKFUEL03", layer.name="2003 Wood Use", maxpoints=40000000, alpha.regions=100,legend=TRUE)
-c_map08<-mapview(dist_a, zcol="COOKFUEL08", layer.name="2008 Wood Use", maxpoints=40000000, alpha.regions=100,legend=TRUE)
-c_map14<-mapview(dist_a, zcol="COOKFUEL14", layer.name="2014 Wood Use", maxpoints=40000000, alpha.regions=100,legend=TRUE)
+ElecMaps #OUTPUT
+
+c_map03<-mapview(dist_a, zcol="COOKFUEL03", layer.name="2003 Wood Use", maxpoints=40000000, alpha.regions=100,legend=TRUE, at= scale, map.types=Mtype, col.regions=cols)
+c_map08<-mapview(dist_a, zcol="COOKFUEL08", layer.name="2008 Wood Use", maxpoints=40000000, alpha.regions=100,legend=TRUE, at= scale, map.types=Mtype, col.regions=cols)
+c_map14<-mapview(dist_a, zcol="COOKFUEL14", layer.name="2014 Wood Use", maxpoints=40000000, alpha.regions=100,legend=TRUE, at= scale, map.types=Mtype, col.regions=cols)
 CookMaps<-c_map03+c_map08+c_map14
-CookMaps
-d_map03<-mapview(dist_a, zcol="deforest03", layer.name="2003 Deforestation", maxpoints=40000000, alpha.regions=100,legend=TRUE)
-d_map08<-mapview(dist_a, zcol="deforest08", layer.name="2008 Deforestation", maxpoints=40000000, alpha.regions=100,legend=TRUE)
-d_map14<-mapview(dist_a, zcol="deforest14", layer.name="2014 Deforestation", maxpoints=40000000, alpha.regions=100,legend=TRUE)
+CookMaps #OUTPUT
+
+d_map03<-mapview(dist_a, zcol="deforest03", layer.name="2003 Deforestation", maxpoints=40000000, alpha.regions=100,legend=TRUE,col.regions=cols, at= scaleD, map.types=Mtype)
+d_map08<-mapview(dist_a, zcol="deforest08", layer.name="2008 Deforestation", maxpoints=40000000, alpha.regions=100,legend=TRUE,col.regions=cols, at= scaleD, map.types=Mtype)
+d_map14<-mapview(dist_a, zcol="deforest14", layer.name="2014 Deforestation", maxpoints=40000000, alpha.regions=100,legend=TRUE,col.regions=cols, at= scaleD, map.types=Mtype)
 defMaps<-d_map03+d_map08+d_map14
-defMaps
+defMaps  #OUTPUT
 
 #======================================================
 ### ANALYIS ###
@@ -297,8 +291,16 @@ plot(fit)
 library(MASS)
 step<- stepAIC(fit, direction="both")
 step$anova
+library(foreign)
+dist_aCSV<-as.data.frame(dist_a)
+head(dist_a)
+
+
 
 ##OLS###
+### TIME SERIES LINERA REGRESSION##### tslm(formula=)
+#splm (for spatial regressions)##
+#rvest- harvest scrape webpages#
 ####BIVARIATE LOCAL SPATIAL AUTOCORRELATION####
 #bivariate Morans
 install.packages("dplyr")
@@ -327,7 +329,6 @@ moran_I <- function(x, y = NULL, W){
   local  <- (xp*W%*%yp)
   list(global = global, local  = as.numeric(local))
 }
-
 
 
 # Permutations for the Bivariate Moran's I
@@ -403,9 +404,11 @@ dist_a03$patterns <- patterns
 
 # Plotting
 mapview(dist_a03, zcol="patterns", legend=TRUE, alpha=0, maxpoints=40000000, alpha.regions=80, layer.name="BiLISA: Deforestation and EA")
+
 #This is the link to download the Hansen data
 #Go to tasks and then download to google drive
 #https://code.earthengine.google.com/d5c909c06ec28626324ecd65c34417f2
+
 #This is the link to download the Cropland data
 #Go to tasks and then download to google drive
 #https://code.earthengine.google.com/594731702af6ef064128e784a632a0e8

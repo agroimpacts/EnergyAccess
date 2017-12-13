@@ -1,11 +1,6 @@
 ---
-<<<<<<< HEAD
 title: "Energy Access Project Overview"
 author: "Nara McCray and Daniel Lassila"
-=======
-title: "Energy Access Project Overview- Nara"
-author: "Nara McCray"
->>>>>>> NBM
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
@@ -14,8 +9,6 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 **R for Spatial Analysis Course Final Project Description**
-
-<<<<<<< HEAD
 ##Summary
 
   [Recent research](http://www.sciencedirect.com/science/article/pii/S0305750X17300025) has identified a relationship between deforestation rates and energy access in rural areas of developing countries. Basic energy sources typically are disperse and require manual labor and time to collect and process, wood being the most common in many rural areas without energy access. When these energy sources are exploited more quickly than they can regrow, deforestation pressures can become detrimental to the environment and to the sustainment of the traditional lifestyle. Adoption of more advanced forms of energy fuel, such as electricity, improve livelihoods and decrease deforestation rates.
