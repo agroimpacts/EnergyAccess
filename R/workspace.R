@@ -43,7 +43,6 @@ d2014$COOKFUEL<-round(d2014$COOKFUEL, 3)*100
 d2014$ELECTRCHH<-round(d2014$ELECTRCHH, 3)*100
 d2014$EDUCLVL<-round(d2014$EDUCLVL, 3)*100
 
-
 ## READ/CLEAN DHS STATCOMPILER DATA ##
 #these variables will be used for multivariate regression for 2014 only
 DHS<- read.csv(file="inst/extdata/clusters2014/GHGC71FL.csv", stringsAsFactors = FALSE)
@@ -138,6 +137,7 @@ dist_a$ELECTRCHH14 <- round(sapply(v.vals, mean))
 #Education
 v.vals <- extract(c, dist_a)
 dist_a$EDUCLVL14 <- round(sapply(v.vals, mean))
+
 #Population
 v.vals <- extract(c1, dist_a)
 dist_a$Pop15 <- round(sapply(v.vals, mean), 3)
@@ -276,11 +276,43 @@ defMaps  #OUTPUT
 
 #======================================================
 ### ANALYIS ###
+#Bivariate regression
+
+WU_EA03<-lm(COOKFUEL03 ~ ELECTRCHH03, data=dist_a)
+WU_EA08<-lm(COOKFUEL08 ~ ELECTRCHH08, data=dist_a)
+WU_EA14<-lm(COOKFUEL14 ~ ELECTRCHH14, data=dist_a)
+
+summary(WU_EA03)
+cor(dist_a$COOKFUEL03, dist_a$ELECTRCHH03)
+summary(WU_EA08)
+cor(dist_a$COOKFUEL08, dist_a$ELECTRCHH08)
+summary(WU_EA14)
+cor(dist_a$COOKFUEL14, dist_a$ELECTRCHH14)
+
+WU_D03<-lm(deforest03 ~ COOKFUEL03, data=dist_a)
+WU_D08<-lm(deforest08 ~ COOKFUEL08, data=dist_a)
+WU_D14<-lm(deforest14 ~ COOKFUEL14, data=dist_a)
+summary(WU_D03)
+cor(dist_a$deforest03, dist_a$COOKFUEL03)
+summary(WU_D08)
+cor(dist_a$deforest08, dist_a$COOKFUEL08)
+summary(WU_D08)
+cor(dist_a$deforest14, dist_a$COOKFUEL14)
+
+EA_D03<- lm(deforest03 ~ ELECTRCHH03, data=dist_a)
+EA_D08<- lm(deforest08 ~ ELECTRCHH08, data=dist_a)
+EA_D14<- lm(deforest14 ~ ELECTRCHH14, data=dist_a)
+summary(EA_D03)
+cor(dist_a$deforest03, dist_a$ELECTRCHH03)
+summary(EA_D08)
+cor(dist_a$deforest08, dist_a$ELECTRCHH08)
+summary(EA_D14)
+cor(dist_a$deforest14, dist_a$ELECTRCHH14)
+
+
 ##Multivariate Regression##
-head(dist_a)
 fit<-lm(deforestALL ~ COOKFUEL14 + ELECTRCHH14 + Pop15 + EDUCLVL14 + Built14 + crop09, data= dist_a)
 summary(fit)
-coefficients(fit)
 confint(fit, level=0.95) #confidence intervals
 fitted(fit)
 plot(residuals(fit))
@@ -288,13 +320,11 @@ anova(fit)
 layout(matrix(c(1,2,3,4),2,2))
 plot(fit)
 
+plot(dist_a$EDUCLVL14)
+
 library(MASS)
 step<- stepAIC(fit, direction="both")
 step$anova
-library(foreign)
-dist_aCSV<-as.data.frame(dist_a)
-head(dist_a)
-
 
 
 ##OLS###
