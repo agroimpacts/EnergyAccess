@@ -1,0 +1,507 @@
+---
+title: "Exploring the Relationship Between Deforestation and Energy Access"
+subtitle: "Geospatial Analysis with R- FINAL PROJECT REPORT"
+author: "Nara McCray and Daniel Lassila"
+date: "`r Sys.Date()`"
+output: 
+  prettydoc::html_pretty: 
+      theme: tactile
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+```{r html_doc, eval=FALSE, include=FALSE}
+library(rmarkdown)
+library(knitr)
+render(input = "Final_Report.Rmd", output_format = "html_vignette", output_file = "Final_Report.html")
+```
+
+##Introduction
+Recent research has identified an inverse relationship between deforestation rates and energy access in rural areas of developing countries (Tanner, 2017). The simplest forms of cooking fuel occur naturally and are typically dispersed, requiring manual labor and time to collect and process, wood being the most common in many rural areas without energy access. When these energy sources are exploited more quickly than they can regrow, deforestation pressures can become detrimental to the environment and to the sustainability of the traditional lifestyle. Adoption of more advanced forms of energy, such as electricity, improve livelihoods and may decrease deforestation rates. 
+
+  The reality is that there are over 1.1 billion people living today without access to electricity, primarily in Sub-Saharan Africa and South Asia. As access to electricity increases, rural areas may reduce their use of biofuels, but this access to a new energy source may also increase production, leading to an increase in deforestation rates. The relationship between the two is suggested to be inverse based off of the Tanner research; as electrification increases, deforestation decreases. However, this can vary by location and other variables.
+  
+  Our research project uses Ghana as a case study and RStudio as the program through which to test the correlation between rural electrification and deforestation.  Ghana was chosen because of the rapid 54.4% increase in energy access the nation has experienced from 1990-2014 [INSERT GRAPH]. With the R programming language, we were able to analyze/manipulate data and produce visualizations. The project will separately assess rates of wood use through reporting on cooking fuel type, rates of electrification, and rates of deforestation by district. Additional variables which may also contribute to deforestation trends will be used in a multivariate regression.
+
+<center>
+![African Energy Access Chart](../Vignettes/fig/CopyofAfricanAccess.jpg)
+</center>  
+
+  The multivariate analysis will reveal to what extent the different independent variables are influencing deforestation in Ghana. Population density is an independent variable used to account for demand of natural resources and to factor in urban/rural variances. Built-up area is an indicator of economic development and natural resource demand. Crop land is an independent variable used to account for the rural/urban split and land pressure to convert forest to agriculture. Education is the final independent variable and it is used to account for privilege/socioeconomic status and awareness of the environmental repercussions of using wood as cooking fuel. This variable specifically gauges the education rates of female survey respondents. Female respondents who are able to receive any form of education are likely to have more freedom and spend less time doing housework like collecting fire wood.  
+
+>Research Questions:
+
+>* How does the climb up the energy ladder, wood use as cooking fuel, and deforestation vary over time and space in Ghana from 2003-2014? 
+>* What are the implications for fuelwood demand as households switch energy sources?  
+>* How do changes in energy access affect deforestation in Ghana? 
+
+
+##Methods
+
+__Survey Data Cleaning (Nara):__ 
+
+######This step involved cleaning, recoding, and separating data into a dataframe for each survey year, aggregating to cluster level by averaging, and interpolating to a continuous surface for aggregation to the district unit of analysis.*
+
+Ghana is the study area of focus. We plan to conduct our research on the district scale. National and district boundary datasets were downloaded from the Humanitarian Data Exchange website. In order to get values for the variables of interest for each district, microsurvey data from the Demographic and Health Survey (DHs) was used. The international DHS asks respondents questions regarding household characteristics; which we will use to understand energy access and wood use in Ghana. The most recent DHS surveys were conducted in Ghana for 2003, 2008 and 2013 and were specifically administered to women. Variables of interest sourced from this survey were education, energy access and wood use as cooking fuel.  
+
+IPUMS is a database maintained by the University of Minnesota which compiles global census and survey conveniently aggregated across space and time [SOURCE]. This data unfortunately was not accompanied by spatial data, but cluster coordinates were available through the DHS StatCompiler website for the survey year of interest [SOURCE]. This spatial coordinate data was accompanied with variables for population density and built-up land for each cluster area, which are additional independent variables used for the multivariate analysis. The data sourced from IPUMS and DHSstatcompiler were averaged by survey cluster number then further aggregated to district level. This results in categorical Boolean survey response values being transformed into the percentage values by district which is the unit of analysis. 
+
+
+|Does the house have electricity?:|
+|------:|
+|0-NO|
+|1-YES|
+
+|Type of cooking fuel:|
+|------:|
+|1 “Electricity”|
+|2 “LPG”|
+|3 “Natural gas”|
+|4 “Biogas”|
+|5 “Kerosene”|
+|6 “Coal, lignite”| 
+|7 “Charcoal”|
+|8 “Wood” |
+|9 “Straw/shrubs/grass”|
+|10 “Agricultural crop”| 
+|11 “Animal dung” |
+|95 “No food cooked in house”| 
+|96 “Other” |
+
+|Respondent highest level of education:|
+|------:|
+|0- No education|
+|1- Primary|
+|2- Secondary |
+|3- Higher|
+
+
+
+The data in its raw format is needed to be altered before aggregating to the unit of analysis. Boolean values of electricity translated into percentage of respondents with energy access once aggregated by mean to the cluster points. The wood use as cooking fuel responses were recoded to Boolean values with 1 representing wood and 0 representing else. The highest level of education was recoded to 1 representing educated and 0 representing no education. Once aggregated, these became percentage values of wood use as cooking fuel and education per cluster. 
+
+The survey clusters were not consistent across survey years and although the number of clusters was larger than the number of districts, some districts did not have any clusters within them. To fix the dilemma of having some districts with no values, the values once attached to the cluster points were then interpolated to a continuous surface.  The raster values were then attached to the district polygons by averaging using the "extract" function.  
+
+<center>
+| Year | Respondents| Clusters | Districts |
+|------:|:-----:|:---------:|:---------:|
+| 2003  | 5691  |  412   | 139 |
+| 2008  | 4961 |   411   |  139 |
+| 2014 |  9396 |  427   |  139 |
+</center>
+
+__Raster Analysis (Dan):__ 
+
+######This step involved accessing and clipping data in Google Earth Engine, reclassing to survey years and aggregating to the district polygon.
+
+The Hansen data forest loss data was used to calculated forest loss per district for each survey year.
+[Hansen Data](https://code.earthengine.google.com/d5c909c06ec28626324ecd65c34417f2)
+The Cropland data was used to calculate the percentage of forest loss per district for each survey year. [Cropland Data](https://code.earthengine.google.com/594731702af6ef064128e784a632a0e8). These rasters are available in Google Earth Engine, where they can be clipped and downloaded. Once imported into RStudio, the forest loss data with pixel values representing year of was reclassified to the three survey time intervals.
+
+|Time Intervals|
+|:---------:|
+|1=2001-2003 (pixel values 1-3)|
+|2=2003-2008 (pixel values 4-8)|
+|3=2008-2014 (pixel values 9-14)|
+
+The crop raster data was from the year 2009 and was reclassified to Boolean pixel values with 1 representing cropland and 0 representing non-cropland. These resulting raster layers were then aggregated to the district shapefile using the "extract" function.  
+
+__Statistical Analysis of Correlation (Dan and Nara):__
+
+######Visualize change in three main variables over the three study years, relationships assed using bivariate regression, then additional variables are used to conduct a multivariate analysis for the most recent survey year and spatial trends are assessed. 
+An exploratory analysis was conducted of the main variables of interest, deforestation, woods use as cooking fuel and energy access over the three survey years. Histograms were produced to observe the raw difference in values over the study years for comparison. Then, a spatial comparison was facilitated through producing leaflet maps with layers for each of the study years. To explore the relationship between the three main variables, scatter plots as a bivariate regression were produced along with r squared values.  
+
+Spatial autocorrelation between deforestation and energy access and between deforestation and wood use as cooking fuel was examined though the production of Bivariate Local Indicators of Spatial Association maps. These maps show clusters of spatial relationships between the independent and dependent variables. These maps are important for understanding how these relationships vary over space. 
+
+Population density, built-up area, crop land and education were then used to conduct a multivariate analysis which is a method of understanding the relative influence of energy access and wood used as cooking fuel on deforestation in comparison to other influencing variables.
+
+__Beautification of Map and Chart Outputs: (Nara and Dan)__ 
+
+######Produce appealing visualizations of spatial and statistical outputs. 
+
+One of the most versatile and innovative components of R programming is the ability to produce a variety of interactive outputs. Using the mapview package, we were able to create customized, creative, and interactive maps to visually display our spatial results.  Using the ggplot package, we created customized, attractive graphs to visually display our statistical results. 
+
+##Data Sources
+
+| Data | Description | Date | Link |
+|:------:|:-----:|:---------:|:---------:|
+| Ghana Administrative Boundaries | Polygon shapefile data. District and country boundary shapefile   |  11/15/2017  | [Humanitarian Data Exchange](https://data.humdata.org/dataset/ghana-administrative-boundaries)|
+| Hansen Forest Loss   | Raster data. Proportion of district land surface that experienced forest loss |   11/15/2017  | [Google Earth Engine](https://explorer.earthengine.google.com/#detail/UMD%2Fhansen%2Fglobal_forest_change_2015_v1_3) |
+| % Agricultural land  |  Raster data. Used to account for pressure to covert forests to agricultural lands  |  12/05/2017  | [ESA GlobCover Map 2009](https://explorer.earthengine.google.com/#detail/ESA%2FGLOBCOVER_L4_200901_200912_V2_3) |
+| DHS Survey Data |  Point shapefile data and tabular data. Source of cluster point data for 2003, 2008, and 2014 survey years. Accompanied by built-up area and population density data |  11/16/2017   | [Demographic Dealth Survey Program](https://dhsprogram.com/data/available-datasets.cfm ) |
+| IPUMS DHS Survey data |  Microsurvey data. Variables include education, wood cooking fuel use, energy access rates |  11/16/2017 | [IPUMS Database](https://www.idhsdata.org/idhs/) |
+
+##Results
+
+####How does the climb up the energy ladder, wood use as cooking fuel, and deforestation vary over time and space in Ghana from 2003-2014? 
+
+```{r, eval=TRUE, warning=FALSE, message=FALSE, echo=FALSE}
+library(sp)
+library(rgdal)
+library(rgeos)
+library(raster)
+library(devtools)
+library(roxygen2)
+library(gstat)
+library(dismo)
+library(RColorBrewer)
+library(viridis)
+library(mapview)
+library(ggplot2)
+library(reshape2)
+library(gridExtra) #arranging ggplots in grid
+library(grid) #arranging ggplots in grid
+library(EnergyAccess)
+
+### CLEANING SURVEY DATA ###
+## READ/CLEAN IPUMS DATA ##
+fnm <- system.file("extdata/idhs_00003.csv", package = "EnergyAccess")
+IPUMS<- read.csv(file=fnm, stringsAsFactors = FALSE)
+
+
+#Reassign into boolean values
+#IPUMS<-subset(IPUMS, URBAN!=1) #activate for rural only analysis
+IPUMS$ELECTRCHH[which(IPUMS$ELECTRCHH ==6 | IPUMS$ELECTRCHH ==8)]<-0
+IPUMS$COOKFUEL[which(IPUMS$COOKFUEL==400 | IPUMS$COOKFUEL==500 | IPUMS$COOKFUEL==520 |IPUMS$COOKFUEL==530) ] <-1
+IPUMS$COOKFUEL[which(IPUMS$COOKFUEL !=1 )]<-0
+IPUMS$EDUCLVL[which(IPUMS$EDUCLVL==2 | IPUMS$EDUCLVL==3 | IPUMS$EDUCLVL==8)] <-1
+
+#Create seperate tables for 3 time intervals
+C_erase<-c("SAMPLE","URBAN","CLUSTERNO", "ELECTRCHH", "COOKFUEL", "EDUCLVL")
+data2003<- IPUMS[IPUMS$SAMPLE==2884, names(IPUMS) %in% C_erase]
+data2008<- IPUMS[IPUMS$SAMPLE==2885, names(IPUMS) %in% C_erase]
+data2014<- IPUMS[IPUMS$SAMPLE==2886, names(IPUMS) %in% C_erase]
+
+#Aggregate to Cluster number by averaging values
+d2003<-aggregate(data2003[, 4:5], list(data2003$CLUSTERNO), mean)
+d2008<-aggregate(data2008[, 4:5], list(data2008$CLUSTERNO), mean)
+d2014<-aggregate(data2014[, 4:6], list(data2014$CLUSTERNO), mean)
+d2003$COOKFUEL<-round(d2003$COOKFUEL, 3)*100
+d2003$ELECTRCHH<-round(d2003$ELECTRCHH, 3)*100
+d2008$COOKFUEL<-round(d2008$COOKFUEL, 3)*100
+d2008$ELECTRCHH<-round(d2008$ELECTRCHH, 3)*100
+d2014$COOKFUEL<-round(d2014$COOKFUEL, 3)*100
+d2014$ELECTRCHH<-round(d2014$ELECTRCHH, 3)*100
+d2014$EDUCLVL<-round(d2014$EDUCLVL, 3)*100
+
+## READ/CLEAN DHS STATCOMPILER DATA ##
+#these variables will be used for multivariate regression for 2014 only
+DHS<- read.csv(file="inst/extdata/clusters2014/GHGC71FL.csv", stringsAsFactors = FALSE)
+C_erase<-c("DHSCLUST","All_Population_Density_2015","BUILT_Population_2014")
+dataDHS<- DHS[, names(DHS) %in% C_erase] #clean out unncessary attributes
+colnames(dataDHS)<-c("DHSCLUST", "Pop15", "Built14")
+dataDHS$Built14<-round(dataDHS$Built14, 4)
+```
+```{r, eval=TRUE, warning=FALSE, message=FALSE, echo=FALSE}
+## MAKING SURVEY DATA SPATIAL ##
+#Import survey cluster points
+clust03<-shapefile("inst/extdata/clusters2003/c2003c.shp") #2003 Survey
+clust08<-shapefile("inst/extdata/clusters2008/c2008c.shp") #2008 Survey
+clust14<-shapefile("inst/extdata/clusters2014/c2014c.shp") #2014 Survey
+
+#attach survey data averages to cluster points
+clust03M <- merge(clust03, d2003, by.x = "DHSCLUST",
+                  by.y = "Group.1")
+clust08M <- merge(clust08, d2008, by.x = "DHSCLUST",
+                 by.y = "Group.1")
+clust14M <- merge(clust14, d2014, by.x = "DHSCLUST",
+                 by.y = "Group.1")
+clust14M <- merge(clust14M, dataDHS, by.x = "DHSCLUST",
+                  by.y ="DHSCLUST") #add columns for Built and Population
+
+cnames<-c("ELECTRCHH","COOKFUEL")
+cnames1<-c("ELECTRCHH","COOKFUEL","EDUCLVL","Pop15","Built14")
+clust03M<- clust03M[,(names(clust03M) %in% cnames)]
+clust08M<- clust08M[,(names(clust08M) %in% cnames)]
+clust14M<- clust14M[,(names(clust14M) %in% cnames1)]
+clust03M <- clust03M[!is.na(clust03M@data$COOKFUEL),]
+clust08M <- clust08M[!is.na(clust08M@data$COOKFUEL),]
+clust14M <- clust14M[!is.na(clust14M@data$COOKFUEL),]
+
+#Import shapefile of Ghana districts
+districts<-shapefile("inst/extdata/DistrictBoundary/GHA_admbndp2_1m_GAUL.shp")
+
+districts <- districts[,(names(districts) %in% "HRname")] #keep column with district names
+
+#project files to Albers Equal Area
+dist_albs<-spTransform(x=districts, CRS="+proj=aea +lat_1=20 +lat_2=-23 +lat_0=0
+                       +lon_0=25 +x_0=0 +y_0=0 +ellps=WGS84 +units=m +no_defs")
+c2003<-spTransform(x=clust03M, CRSobj=proj4string(dist_albs))
+c2008<-spTransform(x=clust08M, CRSobj=proj4string(dist_albs))
+c2014<-spTransform(x=clust14M, CRSobj=proj4string(dist_albs))
+clist<-c(c2003, c2008, c2014)
+
+#Inverse Distance Weighing Interpolation of points
+r <- raster(extent(dist_albs), res = 2000, crs = crs(dist_albs), #create blank raster
+            vals = 1)
+
+interpolCOOK <- lapply(clist, function(x) { #interpolate cluster point values to raster surface
+  a <- gstat(id = "COOKFUEL", formula = COOKFUEL ~ 1, data = x)
+  b <- interpolate(object = r, model = a)
+  c <- mask(x = b, mask = dist_albs)
+})
+interpolEnergy <- lapply(clist, function(x) { #interpolate cluster point values to raster surface
+  a <- gstat(id = "ELECTRCHH", formula = ELECTRCHH ~ 1, data = x)
+  b <- interpolate(object = r, model = a)
+  c <- mask(x = b, mask = dist_albs)
+})
+
+#EDUCATION interpolate cluster point values to raster surface
+a <- gstat(id = "EDUCLVL", formula = EDUCLVL ~ 1, data = c2014)
+b <- interpolate(object = r, model = a)
+c <- mask(x = b, mask = dist_albs)
+#POPULATION interpolate cluster point values to raster surface
+a1 <- gstat(id = "Pop15", formula = Pop15 ~ 1, data = c2014)
+b1 <- interpolate(object = r, model = a1)
+c1 <- mask(x = b1, mask = dist_albs)
+
+#BUILT AREAS interpolate cluster point values to raster surface
+a2 <- gstat(id = "Built14", formula = Built14 ~ 1, data = c2014)
+b2 <- interpolate(object = r, model = a2)
+c2 <- mask(x = b2, mask = dist_albs)
+
+## INTERPOLATED RASTER to DISTRICTS ##
+dist_a<-dist_albs
+#Wood as Cooking Fuel
+v.vals <- extract(interpolCOOK[[1]], dist_a)
+dist_a$COOKFUEL03 <- round(sapply(v.vals, mean))
+v.vals <- extract(interpolCOOK[[2]], dist_a)
+dist_a$COOKFUEL08 <- round(sapply(v.vals, mean))
+v.vals <- extract(interpolCOOK[[3]], dist_a)
+dist_a$COOKFUEL14 <- round(sapply(v.vals, mean))
+#Energy Access
+v.vals <- extract(interpolEnergy[[1]], dist_a)
+dist_a$ELECTRCHH03 <- round(sapply(v.vals, mean))
+v.vals <- extract(interpolEnergy[[2]], dist_a)
+dist_a$ELECTRCHH08 <- round(sapply(v.vals, mean))
+v.vals <- extract(interpolEnergy[[3]], dist_a)
+dist_a$ELECTRCHH14 <- round(sapply(v.vals, mean))
+#Education
+v.vals <- extract(c, dist_a)
+dist_a$EDUCLVL14 <- round(sapply(v.vals, mean))
+
+#Population
+v.vals <- extract(c1, dist_a)
+dist_a$Pop15 <- round(sapply(v.vals, mean), 3)
+#Built Areas
+v.vals <- extract(c2, dist_a)
+dist_a$Built14 <- round(sapply(v.vals, mean), 4)
+
+#======================================================
+#### RASTER SECTION ####
+## DEFORESTATION ##
+fnm5 <- file.path("C:/Users/NMcCray/Documents/R/EnergyAccess/inst/extdata/HansenAllyr.tif")
+deforestation <- raster(fnm5)
+zamr <- raster(x = extent(districts), crs = crs(districts), res = 0.1)
+values(zamr) <- 1:ncell(zamr)
+
+zamr_alb <- projectRaster(from = zamr, res = 2500, crs = crs(dist_a),
+                          method = "ngb")
+
+deforest_alb <- projectRaster(from = deforestation, to = zamr_alb, method = "ngb")
+rclmat <- matrix( #all deforestation since 2001
+  c(0, 0.9, 0, 0.99, 16, 1),
+  nrow = 2,
+  ncol = 3,
+  byrow = TRUE)
+
+rclmat1 <- matrix( #deforestation from 2001-2003
+  c(0, 0.9, 0, 0.99, 3.9, 1, 3.99, 16, 0),
+  nrow = 3,
+  ncol = 3,
+  byrow = TRUE)
+
+rclmat2 <- matrix( #deforestation from 2003-2008
+  c(0, 3.9, 0, 3.99, 8.9, 1, 8.99, 16, 0),
+  nrow = 3,
+  ncol = 3,
+  byrow = TRUE)
+
+rclmat3 <- matrix( #deforestation from 2008-2014
+  c(0, 8.9, 0, 8.99, 14.9, 1, 14.99, 16, 0),
+  nrow = 3,
+  ncol = 3,
+  byrow = TRUE)
+
+totaldeforestclass <- reclassify(x = deforest_alb, rcl = rclmat, include.lowest = TRUE)
+deforestclass0103 <- reclassify(x = deforest_alb, rcl = rclmat1, include.lowest = TRUE)
+deforestclass0408 <- reclassify(x = deforest_alb, rcl = rclmat2, include.lowest = TRUE)
+deforestclass0914 <- reclassify(x = deforest_alb, rcl = rclmat3, include.lowest = TRUE)
+
+#extract values
+deforest.all <-extract(totaldeforestclass, dist_a)
+deforest.0103 <- extract(deforestclass0103, dist_a)
+deforest.0408 <- extract(deforestclass0408, dist_a)
+deforest.0914 <- extract(deforestclass0914, dist_a)
+
+#aggregated to district
+dist_a$deforestALL<-round(100*sapply(deforest.all, mean),3)
+dist_a$deforest03<-round(100*sapply(deforest.0103, mean),3)
+dist_a$deforest08<-round(100*sapply(deforest.0408, mean),3)
+dist_a$deforest14<-round(100*sapply(deforest.0914, mean),3)
+
+
+## CROPLAND ##
+fnm6 <- file.path("C:/Users/NMcCray/Documents/R/EnergyAccess/inst/extdata/LandUse2009.tif")
+CLand <- raster(fnm6)
+CLand_alb <- projectRaster(from = CLand, to = zamr_alb, method = "ngb") #project
+
+rcc1 <- matrix(
+  c(0, 31, 1, 39, 231, 0),
+  nrow = 2,
+  ncol = 3,
+  byrow = TRUE)
+
+CLand_RC <- reclassify(x = CLand_alb, rcl = rcc1, include.lowest = TRUE)
+CLand_RC_e <- extract(CLand_RC, dist_a)
+dist_a$crop09<-round(100*sapply(CLand_RC_e, mean),3) #aggregate crop % values to district
+```
+
+```{r, eval=TRUE, warning=FALSE, message=FALSE, echo=FALSE}
+#======================================================
+### VISUALATION ###
+
+#Descriptive stats
+#scatter plots
+
+#>>>Energy Access
+elecdf = data.frame(count = c(1:139), dist_a@data[,5:7])
+colnames(elecdf)<-c("count","energy access 2003","energy access 2008","energy access 2014")
+elecdf.m = melt(elecdf, id.vars ="count", measure.vars = c("energy access 2003","energy access 2008","energy access 2014"))
+p1<-ggplot(elecdf.m, aes(count, value, colour = variable)) + geom_point() + ylim(0,100)+stat_smooth(method=lm)+ ggtitle("Energy Access") +theme(plot.title = element_text(color="#666666", face="bold", size=23, hjust=0))+labs(x="District #",y="% of Electrified Dwellings")+theme(axis.title = element_text( color="#666666", face="bold", size=13))
+
+#>>>Wood Use
+cookdf = data.frame(count = c(1:139), dist_a@data[,2:4])
+colnames(cookdf)<-c("count","wood use 2003","wood use 2008","wood use 2014")
+cookdf.m = melt(cookdf, id.vars ="count", measure.vars = c("wood use 2003","wood use 2008","wood use 2014"))
+p2<-ggplot(cookdf.m, aes(count, value, colour = variable)) + geom_point() + ylim(0,100)+stat_smooth(method=lm)+ ggtitle("Wood Use as Cooking Fuel") +theme(plot.title = element_text(color="#666666", face="bold", size=23, hjust=0))+labs(x="District #",y="% of Wood Use")+theme(axis.title = element_text( color="#666666", face="bold", size=13))
+
+#>>>Deforestation
+defdf = data.frame(count = c(1:139), dist_a@data[,12:14])
+colnames(defdf)<-c("count","deforestation 2003","deforestation 2008","deforestation 2014")
+defdf.m = melt(defdf, id.vars ="count", measure.vars = c("deforestation 2003","deforestation 2008","deforestation 2014"))
+head(defdf.m)
+p3<-ggplot(defdf.m, aes(count, value, colour = variable)) + geom_point() + ylim(0,15)+stat_smooth(method=lm)+ ggtitle("Deforestation") +theme(plot.title = element_text(color="#666666", face="bold", size=23, hjust=0))+labs(x="District #",y="% of Area Deforested")+theme(axis.title = element_text( color="#666666", face="bold", size=13))
+
+grid.arrange(p1,p2,p3, nrow=3) #OUTPUT
+```
+
+The scatter plots reveal how each of the 139 districts change over time. The energy access plot shows a steady increase in energy access as the trend lines show that the percent of electrified dwellings increases from 2003 to 2014. The wood use as cooking fuel plot shows a drastic decrease in use of wood as a cooking fuel from 2003. In 2003 nearly all districts have a use rate about 75%, the other two survey periods have similar rates lower than 50%. Deforestation trends indicate an increase in deforestation over time; the multivariate linear regression will highlight the extent to which the different independent variables are influencing deforestation in Ghana.
+
+```{r, eval=TRUE, warning=FALSE, message=FALSE, echo=FALSE}
+#histograms
+h1<-ggplot(data = elecdf.m, mapping = aes(x = value, fill=variable)) +
+  geom_histogram(bins = 10) + facet_wrap(~variable) #energy access
+h2<-ggplot(data = cookdf.m, mapping = aes(x = value, fill=variable)) +
+  geom_histogram(bins = 10) + facet_wrap(~variable) #Wood
+h3<-ggplot(data = defdf.m, mapping = aes(x = value, fill=variable)) +
+  geom_histogram(bins = 10) + facet_wrap(~variable) #Deforestation
+
+grid.arrange(h1,h2,h3, nrow=3) #OUTPUT
+```
+
+The histograms tell a story similar to the scatter plots. Energy access in 2014 has more districts with higher energy access rates. Wood use shows a significant shift, high use to low use, from 2003 to 2014. Deforestation is under 1% of land area in most districts in 2003; the amount of deforestation does increase in 2008 and in again 2014.  
+```{r, eval=TRUE, warning=FALSE, message=FALSE, echo=FALSE}
+#maps
+scale<-seq(0, 100, 10) #standardize legend scale
+scaleD<-seq(0, 20, 2) #scale for deforesataion legends
+cols<-rev(get_col_regions()) #add col.regions=cols for reveresed and new colors
+Mtype<-c("CartoDB.Positron") #basemap
+
+e_map03<-mapview(dist_a, zcol="ELECTRCHH03", col.regions=cols, layer.name="2003 Energy Access", maxpoints=40000000, alpha.regions=100,legend=TRUE, at= scale, map.types=Mtype)
+e_map08<-mapview(dist_a, zcol="ELECTRCHH08", col.regions=cols, layer.name="2008 Energy Access", maxpoints=40000000, alpha.regions=100,legend=TRUE, at= scale, map.types=Mtype)
+e_map14<-mapview(dist_a, zcol="ELECTRCHH14", col.regions=cols, layer.name="2014 Energy Access", maxpoints=40000000, alpha.regions=100,legend=TRUE, at= scale, map.types=Mtype)
+ElecMaps=e_map03+ e_map08 +e_map14
+ElecMaps #OUTPUT
+
+c_map03<-mapview(dist_a, zcol="COOKFUEL03", layer.name="2003 Wood Use", maxpoints=40000000, alpha.regions=100,legend=TRUE, at= scale, map.types=Mtype, col.regions=cols)
+c_map08<-mapview(dist_a, zcol="COOKFUEL08", layer.name="2008 Wood Use", maxpoints=40000000, alpha.regions=100,legend=TRUE, at= scale, map.types=Mtype, col.regions=cols)
+c_map14<-mapview(dist_a, zcol="COOKFUEL14", layer.name="2014 Wood Use", maxpoints=40000000, alpha.regions=100,legend=TRUE, at= scale, map.types=Mtype, col.regions=cols)
+CookMaps<-c_map03+c_map08+c_map14
+CookMaps #OUTPUT
+
+d_map03<-mapview(dist_a, zcol="deforest03", layer.name="2003 Deforestation", maxpoints=40000000, alpha.regions=100,legend=TRUE,col.regions=cols, at= scaleD, map.types=Mtype)
+d_map08<-mapview(dist_a, zcol="deforest08", layer.name="2008 Deforestation", maxpoints=40000000, alpha.regions=100,legend=TRUE,col.regions=cols, at= scaleD, map.types=Mtype)
+d_map14<-mapview(dist_a, zcol="deforest14", layer.name="2014 Deforestation", maxpoints=40000000, alpha.regions=100,legend=TRUE,col.regions=cols, at= scaleD, map.types=Mtype)
+defMaps<-d_map03+d_map08+d_map14
+defMaps  #OUTPUT
+```
+
+The maps show energy access expanding from the smaller urban districts into the larger sized sparsely populated districts over time. The spatial visualization of wood use as cooking fuel reveals the opposite of the expected outcome, which is rural areas are expected to use more wood as a fuel source than urban areas. The map shows that this assumption is true for 2003, but reverses in 2008 and 2014 where high use of wood as cooking fuel is high in urban districts and less in rural districts in the north. Deforestation is concentrated in the southwest of Ghana and is increasing over the survey years.  
+ 
+####What are the implications for fuelwood demand as households switch energy sources?
+```{r, eval=TRUE, warning=FALSE, message=FALSE, echo=FALSE}
+#======================================================
+### ANALYIS ###
+#Bivariate regression
+
+WU_EA03<-lm(COOKFUEL03 ~ ELECTRCHH03, data=dist_a)
+WU_EA08<-lm(COOKFUEL08 ~ ELECTRCHH08, data=dist_a)
+WU_EA14<-lm(COOKFUEL14 ~ ELECTRCHH14, data=dist_a)
+
+summary(WU_EA03)
+cor(dist_a$COOKFUEL03, dist_a$ELECTRCHH03)
+summary(WU_EA08)
+cor(dist_a$COOKFUEL08, dist_a$ELECTRCHH08)
+summary(WU_EA14)
+cor(dist_a$COOKFUEL14, dist_a$ELECTRCHH14)
+
+WU_D03<-lm(deforest03 ~ COOKFUEL03, data=dist_a)
+WU_D08<-lm(deforest08 ~ COOKFUEL08, data=dist_a)
+WU_D14<-lm(deforest14 ~ COOKFUEL14, data=dist_a)
+summary(WU_D03)
+cor(dist_a$deforest03, dist_a$COOKFUEL03)
+summary(WU_D08)
+cor(dist_a$deforest08, dist_a$COOKFUEL08)
+summary(WU_D08)
+cor(dist_a$deforest14, dist_a$COOKFUEL14)
+```
+
+
+To understand if there indeed is a relationship between electrification and use of wood as a cooking fuel, we conducted a bivariate regression between these two variables for the three survey years. There is a negative correlation between the variables in 2003, meaning as energy access increased, use of wood decreased. This affirms our assumptions. But, as energy access increases in 2008 and 2014 the correlation between the two variables becomes strong and positive with a values of 0.86 and 0.76 respectively. Notably in 2008, 73% of the variation in wood use is explained by energy access indicated by the R squared value.  
+The relationship between use of wood as a cooking fuel and deforestation is negative in 2003 and then becomes positive in 2008 and 2014. The p-values for the regression models are high between these two variables, indicating that wood use as cooking fuel is not a significant driver of deforestation in Ghana. This opposes the findings in the Tanner paper.  
+
+####How do changes in energy access affect deforestation in Ghana? 
+Regression of energy access and deforestation for all three years. Correlation, who the correlation changes overtime. Multivariate regression to highlight relative influence of energy access on deforestation with the most recent data available.
+
+```{r, eval=TRUE, warning=FALSE, message=FALSE, echo=FALSE}
+EA_D03<- lm(deforest03 ~ ELECTRCHH03, data=dist_a)
+EA_D08<- lm(deforest08 ~ ELECTRCHH08, data=dist_a)
+EA_D14<- lm(deforest14 ~ ELECTRCHH14, data=dist_a)
+summary(EA_D03)
+cor(dist_a$deforest03, dist_a$ELECTRCHH03)
+summary(EA_D08)
+cor(dist_a$deforest08, dist_a$ELECTRCHH08)
+summary(EA_D14)
+cor(dist_a$deforest14, dist_a$ELECTRCHH14)
+```
+In all three study years there is a positive correlation between energy access and deforestation. This means that increases in energy access are associated with increases in deforestation in Ghana. This is likely due to complex implications of energy access which are discussed in the discussion section. 
+
+```{r, eval=TRUE, warning=FALSE, message=FALSE, echo=FALSE}
+##Multivariate Regression##
+fit<-lm(deforestALL ~ COOKFUEL14 + ELECTRCHH14 + Pop15 + EDUCLVL14 + Built14 + crop09, data= dist_a)
+summary(fit)
+confint(fit, level=0.95) #confidence intervals
+fitted(fit)
+plot(residuals(fit))
+anova(fit)
+```
+
+A Multivariate regression analysis was conducted to understand how energy access impact deforestation in comparison to other influencing variables. Additional variables included in this part of the analysis are population density, education, built-up area, and cropland area. The variables collectively explain about 50% of the variation in deforestation, indicated by the adjusted r-squared value of 0.493. The most significant variables are electrification rate and cropland area. For a 1% increase in cropland area, there will be an increase in deforestation of 0.077%. For a 1% increase in energy access rates, there will be an increase in deforestation of 0.11934%. Although these are the most significant, the most influential variable is built-up area which also increases deforestation.  
+
+##Deforestation
+
+The increase in energy access from 2003 to 2014 is expected. Our initial research indicated that Ghana experienced a rapid increase in energy access during this time period and the survey data verifies this finding. The use of wood as a cooking fuel decreases as expected; this is expected because we are assuming that wood use in rural areas is prevalent when alternative sources such as electricity are lacking. As energy access increases, wood use as a cooking fuel is expected to decrease. Although the scatter plots show a decreasing trend overtime as expected, the maps of 2008 and 2014 show that wood use is most prevalent in urban clusters rather than in the larger rural districts up North. This contradicts assumptions made in our research, urban areas despite having higher access to electricity are still heavily dependent on wood as a cooking fuel while rural areas have significantly lower rates of wood use as cooking fuel.  
+
+This may be because rural Ghanaian communities lack the resources to access forests for wood fuel sources, wood is too expensive for rural communities to utilize as a cook fuel source, or that use of more prevalent resources like animal dung or crop residues are the norm. This exemplifies the importance of background research and local knowledge in conducting analysis of unfamiliar developing countries. In this research wood-based fuels were aggregated to 1, else to 0. Further examination of the additional fuel choices can reveal the commonly used cooking fuels in rural areas for a more informed analysis. 
+The correlation between energy access and deforestation in all three study years indicates that energy access in Ghana is associated with increased deforestation pressures. This finding also opposed the initial hypothesis which was based on the assumption that prevalence of wood use as cooking fuel is leading to deforestation and that increased access to energy will alleviate this issue. In addition to the potential of electricity to alleviate wood fuel dependence, electricity can also enable communities to expand their economic activities. Economic growth may increase production, agriculture and urbanization which can increase deforestation. Because wood use as fuel is found through the bivariate regression analysis to not be a significant driver of deforestation in Ghana we refer to the multivariate analysis to identify the leading drivers of deforestation in this country.  
+
+The multivariate analysis shows energy access and cropland area as the most significant drivers of deforestation in Ghana. This aligns with our other results which indicate energy access as a driver of deforestation rather than a reducer. The multivariate regression results show conflicting results regarding urbanization and deforestation. Population density has a negative effect on deforestation, meaning deforestation decreases with higher population density. Built-up area increases deforestation according to the model. High population density was expected to cause increases in deforestation, but this result shows that urbanization is not a driver of deforestation in Ghana. Because agriculture appears to be a more prevalent driving factor of deforestation, rural areas with less people, and higher ratios of agriculture are more associated with increased deforestation than urbanization pressures. 
+
+Results of this statistical research using RStudio indicate that increasing energy access in Ghana is leading to increased deforestation. This finding is apparent through trends in use of wood fuel as a cooking source, through correlation and regression analysis between deforestation and energy access, and by a multivariate regression analysis. The hypothesized relationship between energy access and deforestation was thought to be a negative one based on the results of the Tanner 2017 research. This research was not conducted at the sub-national scale, distinguished between rural and urban, and was generalized over 158 nations. Our analysis was at the district level, did not distinguish between urban and rural, and only of one country. Ghana is a unique country with trends in wood use as a cooking fuel that differ from the assumptions made in the Tanner paper. From our findings we can conclude that agricultural growth associated with increased access to electricity are increasing rates of deforestation in Ghana.  
+
+##Sources
+
+Tanner, Andrew M., Johnston, Alison L. June 2017. The Impact of Rural Electric Access on Deforestation Rates [online]. World Development Journal. Accessed: November 2017. Available From: http://www.sciencedirect.com/science/article/pii/S0305750X17300025 

@@ -320,7 +320,6 @@ anova(fit)
 layout(matrix(c(1,2,3,4),2,2))
 plot(fit)
 
-plot(dist_a$EDUCLVL14)
 
 library(MASS)
 step<- stepAIC(fit, direction="both")
